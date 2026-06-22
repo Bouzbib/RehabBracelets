@@ -47,17 +47,17 @@ public class GameManager : MonoBehaviour
         Debug.Log($"[Master] Level changed to {levelManager.chosenLevel} "); // +$"→ {levelManager.nivel.lines}x{levelManager.nivel.columns}");
     }
 
-    // ── Stimulus Mode ────────────────────────────────────────
-    void SetupModeDropdown()
+    // ── Stimulus Type ────────────────────────────────────────
+    void SetupTypeDropdown()
     {
-        modeDropdown.ClearOptions();
-        modeDropdown.AddOptions(new System.Collections.Generic.List<string> {
+        typeDropdown.ClearOptions();
+        typeDropdown.AddOptions(new System.Collections.Generic.List<string> {
             "Haptic", "Audio", "AudioHaptic", "None"
         });
 
         // Set to current mode
-        modeDropdown.value = (int)levelManager.chosenStimulusType;
-        modeDropdown.onValueChanged.AddListener(OnTypeChanged);
+        typeDropdown.value = (int)levelManager.chosenStimulusType;
+        typeDropdown.onValueChanged.AddListener(OnTypeChanged);
     }
 
     void OnTypeChanged(int index)
@@ -67,7 +67,7 @@ public class GameManager : MonoBehaviour
     }
 
     // ── Stimulus Mode ────────────────────────────────────────
-    void SetupTypeDropdown()
+    void SetupModeDropdown()
     {
         modeDropdown.ClearOptions();
         modeDropdown.AddOptions(new System.Collections.Generic.List<string> {

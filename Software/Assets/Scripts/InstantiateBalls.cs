@@ -141,13 +141,14 @@ public class InstantiateBalls : MonoBehaviour
     					interactiveBalls.name = "Ball_" + i.ToString() + "_" + j.ToString(); 
     					interactiveBalls.transform.localScale = Vector3.one * sizeSpheres;
     				}
+					
 
-    				state = -1;
+    				
 
     			}
-
-    			
-    			break;
+				primitiveToInstantiate.SetActive(false);
+				state = -1;
+				break;
 
 
     		case -2:
