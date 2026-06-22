@@ -17,6 +17,9 @@ using UnityEngine.UI;
 
 public class HapticUDPController : MonoBehaviour
 {
+    [Serializable]
+    public enum ArmID {Left, Right};
+    public ArmID armID;
     public static HapticUDPController Instance { get; private set; }
 
     [Header("ESP32 Address")]
@@ -52,6 +55,14 @@ public class HapticUDPController : MonoBehaviour
     // ═════════════════════════════════════════════════════════
     void Awake()
     {
+        if(this.armID == ArmID.Right)
+        {
+            this.ackPort = 5006;
+        }
+        else
+        {
+            this.ackPort = 5008;
+        }
         if (Instance != null && Instance != this) { Destroy(gameObject); return; }
         Instance = this;
         // DontDestroyOnLoad(gameObject);
@@ -68,7 +79,7 @@ public class HapticUDPController : MonoBehaviour
         StartReceiver(localIP);
         SetStatusLight(false);
 
-        SendCommand("CONNECT");
+        // SendCommand("CONNECT");
         Debug.Log($"[Haptics] Sent CONNECT to {espIP}:{espPort}");
     }
 
@@ -176,7 +187,7 @@ public class HapticUDPController : MonoBehaviour
     //  Public API
     // ═════════════════════════════════════════════════════════
     public void TriggerMotor(int motorIndex, int intensity = 255, int durationMs = 0)
-        => SendCommand($"MOTOR:{Mathf.Clamp(motorIndex,0,7)}:{Mathf.Clamp(intensity,0,255)}:{durationMs}");
+        => SendCommand($"MOTOR:{Mathf.Clamp(motorIndex,0,4)}:{Mathf.Clamp(intensity,0,255)}:{durationMs}");
 
     public void Pulse(int motorIndex, int durationMs, int intensity = 255)
         => TriggerMotor(motorIndex, intensity, durationMs);

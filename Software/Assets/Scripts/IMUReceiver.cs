@@ -18,6 +18,10 @@ using TMPro;
 
 public class IMUReceiver : MonoBehaviour
 {
+    [Serializable]
+    public enum ArmID {Left, Right};
+    public ArmID armID;
+
     [Header("Recording")]
     public float timeOn = 5.0f;
     [Header("Network")]
@@ -56,6 +60,15 @@ public class IMUReceiver : MonoBehaviour
     // ═════════════════════════════════════════════════════════
     void Start()
     {
+        if(this.armID == ArmID.Right)
+        {
+            this.imuPort = 5007;
+        }
+        else
+        {
+            this.imuPort = 5009;
+        }
+
         calibratingPosition = this.GetComponent<CalibrateHandPosition>();
 
         string localIP = GetLocalIP();
