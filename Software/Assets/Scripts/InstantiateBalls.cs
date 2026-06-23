@@ -87,20 +87,26 @@ public class InstantiateBalls : MonoBehaviour
     {
         time0 = System.DateTime.Now.ToString("ddMMyyyy-HHmm");
 		state = -3;
-        
-        // interactiveObject.tag = "InteractiveObject";
-        // interactiveObject.AddComponent<Rigidbody>();
-        // interactiveObject.GetComponent<Rigidbody>().isKinematic = true;
-        // interactiveObject.GetComponent<Rigidbody>().useGravity = false;
 
 
-        // panelStart = GameObject.Find("PanelStart");
+		handVisual = new GameObject[2];
+		handVisual[0] = this.GetComponent<CalibrateHandPosition>().handLeftObject;
+		handVisual[1] = this.GetComponent<CalibrateHandPosition>().handRightObject;
 
-        RecordPerformance();
-    }
 
-    // Update is called once per frame
-    void Update()
+		// interactiveObject.tag = "InteractiveObject";
+		// interactiveObject.AddComponent<Rigidbody>();
+		// interactiveObject.GetComponent<Rigidbody>().isKinematic = true;
+		// interactiveObject.GetComponent<Rigidbody>().useGravity = false;
+
+
+		// panelStart = GameObject.Find("PanelStart");
+
+		// RecordPerformance();
+	}
+
+// Update is called once per frame
+void Update()
     {
         for(int m = 0; m < configException.Count; m++)
 		{
@@ -136,7 +142,7 @@ public class InstantiateBalls : MonoBehaviour
     				{
     					float theta = (i*angleVision / (float)nivel.lines);
     					Vector3 userOrigin = GameObject.Find("CenterEyeAnchor").transform.position;
-    					Vector3 positionBall = new Vector3(radius*Mathf.Cos(theta*Mathf.Deg2Rad), j*height/(float)nivel.columns, radius*Mathf.Sin(theta*Mathf.Deg2Rad)) + userOrigin;
+    					Vector3 positionBall = new Vector3(radius*Mathf.Cos(theta*Mathf.Deg2Rad), j*height/(float)nivel.columns - height/Mathf.Floor(nivel.columns/2), radius*Mathf.Sin(theta*Mathf.Deg2Rad)) + userOrigin;
     					GameObject interactiveBalls = (GameObject)Instantiate(primitiveToInstantiate, positionBall, Quaternion.identity, parentBall.transform);
     					interactiveBalls.name = "Ball_" + i.ToString() + "_" + j.ToString(); 
     					interactiveBalls.transform.localScale = Vector3.one * sizeSpheres;
@@ -152,6 +158,8 @@ public class InstantiateBalls : MonoBehaviour
 
 
     		case -2:
+
+				this.GetComponent<CalibrateHandPosition>().enabled = false;
 	    		// Introduction // CALIBRATION
 
     		// HERE WE NEED TO INIT IMU; AND CALIBRATE -> this determines which hapticUDP is haptic left or haptic right
@@ -200,24 +208,47 @@ public class InstantiateBalls : MonoBehaviour
 
 				objectToLoad = GameObject.Find("Balls").transform.GetChild(config).gameObject;
 
-				objectToLoad.GetComponent<Renderer>().material.color = leftOrRight[trialNumber] == 0 ? Color.blue : Color.green;
+				objectToLoad.GetComponent<Renderer>().material.color = leftOrRight[trialNumber] == 0 ? handVisual[0].GetComponentInChildren<Renderer>().material.color : handVisual[1].GetComponentInChildren<Renderer>().material.color;
 
     			// LOAD CONDITIONS
 
-				handVisual[0].GetComponent<Renderer>().material.color = Color.blue;
-				handVisual[1].GetComponent<Renderer>().material.color = Color.green;
+				//handVisual[0].GetComponent<Renderer>().material.color = Color.blue;
+				//handVisual[1].GetComponent<Renderer>().material.color = Color.green;
 
     			objectToLoad.AddComponent<CollideAndDisappear>();
 
     			interactiveObject = handVisual[leftOrRight[trialNumber]];
-    			handVisual[leftOrRight[(trialNumber+1)%2]].tag = "Untagged";
+				
+				for(int i = 0; i < interactiveObject.transform.Find("Capsules").transform.childCount; i++)
+                {
+					if (interactiveObject.transform.Find("Capsules").transform.GetChild(i).transform.GetChild(0).GetComponent<Rigidbody>() == null)
+					{
+						interactiveObject.transform.Find("Capsules").transform.GetChild(i).transform.GetChild(0).gameObject.AddComponent<Rigidbody>();
+					}
+					
+					interactiveObject.transform.Find("Capsules").transform.GetChild(i).transform.GetChild(0).GetComponent<Rigidbody>().isKinematic = true;
+					interactiveObject.transform.Find("Capsules").transform.GetChild(i).transform.GetChild(0).GetComponent<Rigidbody>().useGravity = false;
+					interactiveObject.transform.Find("Capsules").transform.GetChild(i).transform.GetChild(0).GetComponent<Collider>().isTrigger = true;
+					interactiveObject.transform.Find("Capsules").transform.GetChild(i).transform.GetChild(0).gameObject.tag = "InteractiveObject";
+
+				}
+				for (int i = 0; i < handVisual[(leftOrRight[trialNumber] + 1) % 2].transform.Find("Capsules").transform.childCount; i++)
+				{
+					handVisual[(leftOrRight[trialNumber] + 1) % 2].transform.Find("Capsules").transform.GetChild(i).GetChild(0).gameObject.tag = "Untagged";
+
+				} 
+				
+				
+				/* handVisual[leftOrRight[(trialNumber+1)%2]].tag = "Untagged";
     			interactiveObject.tag = "InteractiveObject";
+
     			if(interactiveObject.GetComponent<Rigidbody>() == null)
     			{
 			        interactiveObject.AddComponent<Rigidbody>();
     			}
 		        interactiveObject.GetComponent<Rigidbody>().isKinematic = true;
 		        interactiveObject.GetComponent<Rigidbody>().useGravity = false;
+				interactiveObject.GetComponent<Collider>().isTrigger = true;  */
 
 
     			startStopWatchTime = Time.time;
@@ -258,14 +289,13 @@ public class InstantiateBalls : MonoBehaviour
 		    					}
 		    					// audioManager.SetPan(Mathf.Pow(-1,leftOrRight[trialNumber+1]));
 		    					break;
-		    				firstTimeHere = false;
     					}
 
-    					// send vib to arm ID
-    					// StimulusManager.mode, type -> pulse
-    					
+						// send vib to arm ID
+						// StimulusManager.mode, type -> pulse
 
-    				}
+						firstTimeHere = false;
+					}
     				if(chosenStimulusMode == StimulusMode.DirectionStatic)
     				{
     					for(int k = 0; k < handHaptic.Length; k++)
@@ -371,7 +401,8 @@ public class InstantiateBalls : MonoBehaviour
 
     			if(objectToLoad.GetComponent<CollideAndDisappear>().finishedVisual)
     			{
-    				state = 2;
+					state = 2;
+
     			}
 
     			// StartCoroutine(WaitForCollision());
@@ -380,6 +411,7 @@ public class InstantiateBalls : MonoBehaviour
 
     		case 2:
 		    	// Destroy(objectToLoad);
+				
     			Destroy(objectToLoad.GetComponent<CollideAndDisappear>());
     			objectToLoad.GetComponent<Renderer>().material.color = Color.white;
 		    	RecordPerformance(nbBloc, trialNumber, config, stopWatch);
@@ -469,14 +501,14 @@ public class InstantiateBalls : MonoBehaviour
     IEnumerator SweepingDirection(int motorStart, int motorFinish)
     {
     	int sign = (int)Mathf.Sign(motorFinish - motorStart);
-    	for(int i = motorStart; i*sign < motorFinish*sign + sign; i = i + sign)
+    	for(int i = motorStart; i*sign < motorFinish*sign + 1; i = i + sign)
     	{
     		Debug.Log("Sweeping Motor " + i);
     		for(int k = 0; k < handHaptic.Length; k++)
     		{
     			handHaptic[k].Pulse(i, (int)Mathf.Floor((float)(pulseDuration)), intensity);
     		}
-    		yield return new WaitForSeconds(1.0f);
+    		yield return new WaitForSeconds((float)pulseDuration);
     	}
     }
 

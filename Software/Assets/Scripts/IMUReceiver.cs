@@ -151,7 +151,11 @@ public class IMUReceiver : MonoBehaviour
         _imuWindowActive = true;
         Debug.Log($"[IMU] Window open for {seconds}s");
         yield return new WaitForSeconds(seconds);
-        // yield return new WaitUntil(() => calibratingPosition.finishCalibrating);
+        if(calibratingPosition != null)
+        {
+            yield return new WaitUntil(() => calibratingPosition.finishCalibrating);
+        }
+        
         _imuWindowActive = false;
         Debug.Log("[IMU] Window closed");
         _imuWindowCoroutine = null;

@@ -5,6 +5,7 @@ using UnityEngine;
 public class CollideAndDisappear : MonoBehaviour
 {
 	public bool isTouched = false;
+    private bool canBeTouched;
     public bool finishedVisual;
     private Color originalColor;
     // Start is called before the first frame update
@@ -13,6 +14,7 @@ public class CollideAndDisappear : MonoBehaviour
         SetMaterialFade(GetComponent<Renderer>().material);
         this.GetComponent<Collider>().isTrigger = true;
         originalColor = this.GetComponent<Renderer>().material.color;
+        canBeTouched = true;
     }
 
     // Update is called once per frame
@@ -27,9 +29,10 @@ public class CollideAndDisappear : MonoBehaviour
 
 	void OnTriggerEnter(Collider other)
     {
-    	if(other.GetComponent<Collider>().tag == "InteractiveObject")
+    	if((other.GetComponent<Collider>().tag == "InteractiveObject") && canBeTouched)
     	{
-    		this.isTouched = true;
+    		isTouched = true;
+            canBeTouched = false;
             StartCoroutine(FadeColor());
     	}
 
@@ -42,9 +45,9 @@ public class CollideAndDisappear : MonoBehaviour
 
         while(color.a > 0.5f)
         {
-            color.a -= Time.deltaTime * 0.8f; // control speed here
+            color.a -= Time.deltaTime * 0.8f;
             rend.material.color = color;
-            yield return null; // wait one frame, then loop
+            yield return null;
         }
         this.finishedVisual = true;        
     }

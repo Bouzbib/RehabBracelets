@@ -4,7 +4,7 @@ using UnityEngine;
 
 public class CalibrateHandPosition : MonoBehaviour
 {
-
+    public GameObject objectTrigger;
     public GameObject modelLeftHand;
     public GameObject modelRightHand;
 
@@ -13,30 +13,30 @@ public class CalibrateHandPosition : MonoBehaviour
     private GameObject wristR, wristL, palmR, palmL;
     private GameObject wristRF, wristLF, palmRF, palmLF;
 
-    private Material[] originalColor;
-    public Material positionMaterial;
-    public bool firstTime;
+    private Color[] originalColor;
+    public bool firstTime = false;
 
-    private Vector3 originalEulerR, originalEulerL;
 
     public bool startCalibrating, finishCalibrating;
 
-    private int state = 0;
+    public int state = 0;
 
-    public IMUReceiver imuReceiver;
+    public IMUReceiver[] imuReceivers;
     
     // Start is called before the first frame update
     void Start()
     {
 
-     	originalColor = new Material[2];
-     	originalColor[0] = modelRightHand.gameObject.GetComponentInChildren<Renderer>().material;
-     	originalColor[1] = modelLeftHand.gameObject.GetComponentInChildren<Renderer>().material;
+     	originalColor = new Color[2];
+        originalColor[0] = handRightObject.GetComponentInChildren<Renderer>().material.color;
+        originalColor[1] = handLeftObject.GetComponentInChildren<Renderer>().material.color;
 
-     	originalEulerR = modelRightHand.transform.eulerAngles;
-     	originalEulerL = modelLeftHand.transform.eulerAngles;
-     	
-           
+        modelRightHand.gameObject.GetComponentInChildren<Renderer>().material.color = originalColor[0];
+        modelLeftHand.gameObject.GetComponentInChildren<Renderer>().material.color = originalColor[1];
+
+        imuReceivers = this.GetComponents<IMUReceiver>();
+
+
     }
 
     // Update is called once per frame
@@ -56,7 +56,25 @@ public class CalibrateHandPosition : MonoBehaviour
 
         }
 
-
+        if(Input.GetKeyDown(KeyCode.A))
+        {
+            if(state == 0)
+            {
+                StartCoroutine(WaitAndRotate(-178, modelRightHand));
+            }
+            if (state == 1)
+            {
+                StartCoroutine(FinishCalibrating(modelRightHand));
+            }
+            if (state == 2)
+            {
+                StartCoroutine(WaitAndRotate(178, modelLeftHand));
+            }
+            if (state == 3)
+            {
+                StartCoroutine(FinishCalibrating(modelLeftHand));
+            }
+        }
 
         wristRF = modelRightHand.transform.Find("b_r_wrist").gameObject;     	
      	palmRF = modelRightHand.transform.Find("b_r_wrist/r_palm_center_marker").gameObject;
@@ -69,29 +87,50 @@ public class CalibrateHandPosition : MonoBehaviour
 		        {
 		        	if(ComparePositions(palmR, palmRF))
 		        	{
-		        		modelRightHand.GetComponentInChildren<Renderer>().material = positionMaterial;
-	        			//StartCoroutine(WaitAndRotate());
-	        			//state = 1;
+                        if (CompareAngles(palmR, palmRF, 1))
+                        {
+                            modelRightHand.GetComponentInChildren<Renderer>().material.color = Color.blue;
+                            objectTrigger.GetComponent<Renderer>().material.color = Color.green;
+                            if (!firstTime)
+                            {
+                                for(int i = 0; i < imuReceivers.Length; i++)
+                                {
+                                    imuReceivers[i].SendInitWire();
+                                    imuReceivers[i].SendCalibrate();
+                                }
+                                StartCoroutine(WaitAndRotate(-178, modelRightHand));
+                                firstTime = true;
+                            }
+                            
+                            
+                        }
 		        		
 		        	}
 		        }
 		        else
 		        {
-		    		modelRightHand.GetComponentInChildren<Renderer>().material = originalColor[0];
-		        }
+		    		modelRightHand.GetComponentInChildren<Renderer>().material.color = originalColor[0];
+                    objectTrigger.GetComponent<Renderer>().material.color = Color.red;
+                }
 
 		        break;
 
 	        case 1:
+
 	        	if(ComparePositions(wristRF, wristR))
 		        {
 		        	if(ComparePositions(palmR, palmRF))
 		        	{
-		        		if(CompareAngles(palmR, palmRF))
+		        		if(CompareAngles(palmR, palmRF, 1))
 		        		{
-		        			modelRightHand.GetComponentInChildren<Renderer>().material = positionMaterial;
-	        				StartCoroutine(FinishCalibrating());
-	        				state = 2;
+		        			modelRightHand.GetComponentInChildren<Renderer>().material.color = Color.blue;
+                            objectTrigger.GetComponent<Renderer>().material.color = Color.blue;
+                            if (!firstTime)
+                            {
+                                StartCoroutine(FinishCalibrating(modelRightHand));
+                                firstTime = true;
+
+                            }
 		        		}
 		        		
 		        		
@@ -99,47 +138,130 @@ public class CalibrateHandPosition : MonoBehaviour
 		        }
 		        else
 		        {
-		    		modelRightHand.GetComponentInChildren<Renderer>().material = originalColor[0];
-		        }
+		    		modelRightHand.GetComponentInChildren<Renderer>().material.color = originalColor[0];
+                    objectTrigger.GetComponent<Renderer>().material.color = Color.red;
 
-		        break;
+                }
+
+                break;
 
 	        case 2:
-	        	break;
+                if (ComparePositions(wristLF, wristL))
+                {
+                    if (ComparePositions(palmL, palmLF))
+                    {
+                        if (CompareAngles(palmL, palmLF, -1))
+                        {
+                            modelLeftHand.GetComponentInChildren<Renderer>().material.color = Color.blue;
+                            objectTrigger.GetComponent<Renderer>().material.color = Color.green;
+                            if (!firstTime)
+                            {
 
-    	}
-        
+                                StartCoroutine(WaitAndRotate(178, modelLeftHand));
+                                firstTime = true;
+                            }
+
+
+                        }
+
+                    }
+                }
+                else
+                {
+                    modelLeftHand.GetComponentInChildren<Renderer>().material.color = originalColor[1];
+                    objectTrigger.GetComponent<Renderer>().material.color = Color.red;
+                }
+
+                break;
+
+            case 3:
+                if (ComparePositions(wristLF, wristL))
+                {
+                    if (ComparePositions(palmL, palmLF))
+                    {
+                        if (CompareAngles(palmL, palmLF, -1))
+                        {
+                            modelLeftHand.GetComponentInChildren<Renderer>().material.color = Color.blue;
+                            objectTrigger.GetComponent<Renderer>().material.color = Color.blue;
+                            if (!firstTime)
+                            {
+                                StartCoroutine(FinishCalibrating(modelLeftHand));
+                                firstTime = true;
+
+                            }
+                        }
+
+
+                    }
+                }
+                else
+                {
+                    modelLeftHand.GetComponentInChildren<Renderer>().material.color = originalColor[1];
+                    objectTrigger.GetComponent<Renderer>().material.color = Color.red;
+
+                }
+
+                break;
+
+        }
+
     }
 
     bool ComparePositions(GameObject obj1, GameObject obj2)
     {
-        Debug.Log("Distance " + obj1.name + ": " + Vector3.Distance(obj1.transform.position, obj2.transform.position));
+        //Debug.Log("Distance " + obj1.name + ": " + Vector3.Distance(obj1.transform.position, obj2.transform.position));
     	return (Vector3.Distance(obj1.transform.position, obj2.transform.position) < 0.05f);
     }
 
-    bool CompareAngles(GameObject obj1, GameObject obj2)
+    bool CompareAngles(GameObject obj1, GameObject obj2, int dir)
     {
-        Debug.Log("Angle: " + Vector3.Angle(obj1.transform.up, obj2.transform.up));
-
-        return (Vector3.Angle(obj1.transform.up, obj2.transform.up) < 5f);
+        //Debug.Log("Angle: " + Vector3.Angle(obj1.transform.up, obj2.transform.up));
+        Vector3 direction = Vector3.one * dir;
+        return (Vector3.Angle(obj1.transform.up, Vector3.Scale(obj2.transform.up,direction)) < 5f);
     }
 
-    IEnumerator WaitAndRotate()
-    {
-    	imuReceiver.SendInitWire();
+    IEnumerator WaitAndRotate(int angle, GameObject objToRotate)
+    {    	
     	yield return new WaitForSeconds(1.0f);
-    	imuReceiver.SendCalibrate();
+    	
     	startCalibrating = true;
-    	yield return new WaitForSeconds(5.0f);
-    	modelRightHand.transform.eulerAngles = new Vector3(originalEulerR.x, originalEulerR.y + 180, originalEulerR.z);
+
+        Quaternion targetRotation = Quaternion.Euler(angle, objToRotate.transform.eulerAngles.y, objToRotate.transform.eulerAngles.z);
+        while(Quaternion.Angle(objToRotate.transform.rotation, targetRotation) > 0.5f)
+        {
+            objToRotate.transform.rotation = Quaternion.RotateTowards(objToRotate.transform.rotation, targetRotation, 45 * Time.deltaTime);
+            yield return null;
+        }
+
+        if(state == 0)
+        {
+            state = 1;
+        }
+        if (state == 2)
+        {
+            state = 3;
+        }
+        firstTime = false;
 
     }
 
-    IEnumerator FinishCalibrating()
+
+    IEnumerator FinishCalibrating(GameObject objectToDisappear)
     {
-    	yield return new WaitForSeconds(5.0f);
-    	finishCalibrating = true;
-    	modelRightHand.gameObject.SetActive(false);
+    	yield return new WaitForSeconds(0.5f);
+        firstTime = false;
+        if (state == 1)
+        {
+            state = 2;
+
+        }
+        if (state == 3)
+        {
+            finishCalibrating = true;
+            this.GetComponent<InstantiateBalls>().enabled = true;
+        }
+        objectToDisappear.gameObject.SetActive(false);
+
     }
 
 }
