@@ -14,6 +14,24 @@ public class GameManager : MonoBehaviour
     [Header("References")]
     [SerializeField] private InstantiateBalls levelManager;
 
+    public HapticUDPController leftController;
+    public HapticUDPController rightController;
+
+    public IMUReceiver leftIMU;
+    public IMUReceiver rightIMU;
+
+    private void Awake()
+    {
+        this.leftController = this.gameObject.AddComponent<HapticUDPController>();
+        leftController.armID = HapticUDPController.ArmID.Left;
+        this.leftIMU = this.gameObject.AddComponent<IMUReceiver>();
+        leftIMU.armID = leftController.armID;
+
+        this.rightController = this.gameObject.AddComponent<HapticUDPController>();
+        rightController.armID = HapticUDPController.ArmID.Right;
+        this.rightIMU = this.gameObject.AddComponent<IMUReceiver>();
+        rightIMU.armID = rightController.armID;
+    }
     void Start() {
         levelManager = this.GetComponent<InstantiateBalls>();
     // Activate second display
@@ -26,6 +44,17 @@ public class GameManager : MonoBehaviour
         SetupTypeDropdown();
 
 	}
+
+    private void Update()
+    {
+        leftController.realArmID = leftIMU.realArmID;
+        rightController.realArmID = rightIMU.realArmID;
+
+        leftController.motorOrder = leftIMU.motorOrder;
+        rightController.motorOrder = rightIMU.motorOrder;
+
+    }
+
 
     // // ── Level ────────────────────────────────────────────────
     void SetupLevelDropdown()

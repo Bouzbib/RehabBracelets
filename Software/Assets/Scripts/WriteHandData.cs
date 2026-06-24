@@ -8,13 +8,6 @@ using System.IO;
 
 public class WriteHandData : MonoBehaviour
 {
-    [Header("Hand Skeletons")]
-    [Tooltip("OVRSkeleton component for the left hand (OVRSkeleton.SkeletonType = HandLeft)")]
-    public OVRSkeleton handLeft;
-
-    [Tooltip("OVRSkeleton component for the right hand (OVRSkeleton.SkeletonType = HandRight)")]
-    public OVRSkeleton handRight;
-
     [Header("Recording Controls")]
     [Tooltip("Key used to start/stop recording.")]
     public KeyCode toggleRecordingKey = KeyCode.Space;
@@ -27,8 +20,8 @@ public class WriteHandData : MonoBehaviour
     public string customFileName = "";
 
 
-	private StreamWriter writerL, writerR;
-	private string pathR, pathL;
+	private StreamWriter writer;
+	private string path;
 
 	public int state = 2;
 
@@ -36,87 +29,110 @@ public class WriteHandData : MonoBehaviour
 	private string time1;
 
 	public CalibrateHandPosition calibratingPosition;
-	public IMUReceiver imuReceiver;
+	public IMUReceiver[] imuReceiver;
+
+	public GameObject[] trackedObjects;
+	private int frame = 0;
 
     private void Start()
     {
 
         time0 = Time.time;
 		time1 = System.DateTime.Now.ToString("ddMMyyyy-HHmm");
-		pathL = "Assets/Resources/DataCollection/Left-" + time1 + ".csv";
-		pathR = "Assets/Resources/DataCollection/Right-" + time1 + ".csv";
+		path = "Assets/Resources/DataCollection/HandCalib-" + customFileName + "-" + time1 + ".csv";
 		calibratingPosition = this.GetComponent<CalibrateHandPosition>();
 
-		imuReceiver = GetComponent<IMUReceiver>();
+		imuReceiver = new IMUReceiver[2];
+		for(int i = 0; i < GetComponents<IMUReceiver>().Length; i++)
+        {
+			if(GetComponents<IMUReceiver>()[i].armID == HapticUDPController.ArmID.Left)
+            {
+				imuReceiver[0] = GetComponents<IMUReceiver>()[i];
+			}
+			if (GetComponents<IMUReceiver>()[i].armID == HapticUDPController.ArmID.Right)
+			{
+				imuReceiver[1] = GetComponents<IMUReceiver>()[i];
+			}
 
-    }
+		}
 
-    private void Update()
+		trackedObjects = new GameObject[4];
+		trackedObjects[2] = calibratingPosition.wristR;
+		trackedObjects[3] = calibratingPosition.palmR;
+		trackedObjects[0] = calibratingPosition.wristL;
+		trackedObjects[1] = calibratingPosition.palmL;
+
+
+	}
+
+	private void Update()
     {
 
+		trackedObjects[2] = calibratingPosition.wristR;
+		trackedObjects[3] = calibratingPosition.palmR;
+		trackedObjects[0] = calibratingPosition.wristL;
+		trackedObjects[1] = calibratingPosition.palmL;
 
-        switch(state)
+
+		switch (state)
 		{
 			case 0:
-				pathL = "Assets/Resources/DataCollection/Left-" + time1 + ".csv";
-				pathR = "Assets/Resources/DataCollection/Right-" + time1 + ".csv";
-		        writerL = new StreamWriter(pathL, true);
-		        writerR = new StreamWriter(pathR, true);
-				writerL.WriteLine("Time;AccX;AccY;AccZ;GyX;GyY;GyZ");
-				for(int i = 0; i < handLeft.GetComponent<OVRSkeleton>().Bones.Count; i++)
-		    	{
-					writerL.Write(";" + handLeft.GetComponent<OVRSkeleton>().Bones[i].Id.ToString() + ";PosX;PosY;PosZ;RotX;RotY;RotZ");
-		    	}
-				writerL.Close();
+				path = "Assets/Resources/DataCollection/HandCalib-" + customFileName + "-" + time1 + ".csv";
+				writer = new StreamWriter(path, true);
 
-				writerR.WriteLine("Time;AccX;AccY;AccZ;GyX;GyY;GyZ");
-				for(int i = 0; i < handRight.GetComponent<OVRSkeleton>().Bones.Count; i++)
-		    	{
-					writerR.Write(";" + handRight.GetComponent<OVRSkeleton>().Bones[i].Id.ToString() + ";PosX;PosY;PosZ;RotX;RotY;RotZ");
-		    	}
-				writerR.Close();
+				writer.Write("Frame;Time;Acc1X;Acc1Y;Acc1Z;Gy1X;Gy1Y;Gy1Z;");
+				writer.Write("Acc2X;Acc2Y;Acc2Z;Gy2X;Gy2Y;Gy2Z;");
+				writer.Write("WristLX;WristLY;WristLZ;WristLRotX;WristLRotY;WristLRotZ;");
+				writer.Write("PalmLX;PalmLY;PalmLZ;PalmLRotX;PalmLRotY;PalmLRotZ;");
+				writer.Write("WristRX;WristRY;WristRZ;WristRRotX;WristRRotY;WristRRotZ;");
+				writer.Write("PalmRX;PalmRY;PalmRZ;PalmRRotX;PalmRRotY;PalmRRotZ");
+
+				writer.Close();
+
 				state = 1;
 				break;
 
 			case 1:
-				pathL = "Assets/Resources/DataCollection/Left-" + time1 + ".csv";
-				pathR = "Assets/Resources/DataCollection/Right-" + time1 + ".csv";
-		        writerL = new StreamWriter(pathL, true);
-		        writerR = new StreamWriter(pathR, true);
-				writerL.WriteLine();
-				writerL.Write((Time.unscaledTime - time0));
-				writerL.Write(imuReceiver._ax + ";" + imuReceiver._ay + ";" + imuReceiver._az + ";" + imuReceiver._gx + ";" + imuReceiver._gy + ";" + imuReceiver._gz);
-		    	for(int i = 0; i < handLeft.GetComponent<OVRSkeleton>().Bones.Count; i++)
+				frame = frame + 1;
+				path = "Assets/Resources/DataCollection/HandCalib-" + customFileName + "-" + time1 + ".csv";
+				writer = new StreamWriter(path, true);
+				writer.WriteLine();
+				writer.Write(frame + ";" + (Time.unscaledTime - time0));
+				for(int i = 0; i < imuReceiver.Length; i++)
+                {
+					writer.Write(";" + imuReceiver[i]._ax + ";" + imuReceiver[i]._ay + ";" + imuReceiver[i]._az + ";" + imuReceiver[i]._gx + ";" + imuReceiver[i]._gy + ";" + imuReceiver[i]._gz);
+				}
+				
+		    	for(int i = 0; i < trackedObjects.Length; i++)
 		    	{
-					writerL.Write(";" + i.ToString() +";"+ handLeft.GetComponent<OVRSkeleton>().Bones[i].Transform.position.x.ToString("F4") +";"+ handLeft.GetComponent<OVRSkeleton>().Bones[i].Transform.position.y.ToString("F4") +";"+ handLeft.GetComponent<OVRSkeleton>().Bones[i].Transform.position.z.ToString("F4") +";"+ handLeft.GetComponent<OVRSkeleton>().Bones[i].Transform.eulerAngles.x.ToString("F4") +";"+ handLeft.GetComponent<OVRSkeleton>().Bones[i].Transform.eulerAngles.y.ToString("F4") +";"+ handLeft.GetComponent<OVRSkeleton>().Bones[i].Transform.eulerAngles.z.ToString("F4")+";"+ handRight.GetComponent<OVRSkeleton>().Bones[i].Transform.position.x.ToString("F4") +";"+ handRight.GetComponent<OVRSkeleton>().Bones[i].Transform.position.y.ToString("F4") +";"+ handRight.GetComponent<OVRSkeleton>().Bones[i].Transform.position.z.ToString("F4") +";"+ handRight.GetComponent<OVRSkeleton>().Bones[i].Transform.eulerAngles.x.ToString("F4") +";"+ handRight.GetComponent<OVRSkeleton>().Bones[i].Transform.eulerAngles.y.ToString("F4") +";"+ handRight.GetComponent<OVRSkeleton>().Bones[i].Transform.eulerAngles.z.ToString("F4"));
-		    	}
-		    	writerL.Close();
+					writer.Write(";" + trackedObjects[i].transform.position.x.ToString("F4") + ";" + trackedObjects[i].transform.position.y.ToString("F4") + ";" + trackedObjects[i].transform.position.z.ToString("F4") + ";" + calibratingPosition.AngularDistance(trackedObjects[i].transform.eulerAngles.x).ToString("F4") + ";" + calibratingPosition.AngularDistance(trackedObjects[i].transform.eulerAngles.y).ToString("F4") + ";" + calibratingPosition.AngularDistance(trackedObjects[i].transform.eulerAngles.z).ToString("F4"));
+				}
+
+		    	writer.Close();
 
 		    	if(calibratingPosition.finishCalibrating)
 		    	{
-		    		state = 2;
+		    		state = 3;
 		    	}
 
-		    	writerR.WriteLine();
-				writerR.Write((Time.unscaledTime - time0));
-				writerR.Write(imuReceiver._ax + ";" + imuReceiver._ay + ";" + imuReceiver._az + ";" + imuReceiver._gx + ";" + imuReceiver._gy + ";" + imuReceiver._gz);
-
-		    	for(int i = 0; i < handRight.GetComponent<OVRSkeleton>().Bones.Count; i++)
-		    	{
-					writerR.Write(";" + i.ToString() +";"+ handRight.GetComponent<OVRSkeleton>().Bones[i].Transform.position.x.ToString("F4") +";"+ handLeft.GetComponent<OVRSkeleton>().Bones[i].Transform.position.y.ToString("F4") +";"+ handLeft.GetComponent<OVRSkeleton>().Bones[i].Transform.position.z.ToString("F4") +";"+ handLeft.GetComponent<OVRSkeleton>().Bones[i].Transform.eulerAngles.x.ToString("F4") +";"+ handLeft.GetComponent<OVRSkeleton>().Bones[i].Transform.eulerAngles.y.ToString("F4") +";"+ handLeft.GetComponent<OVRSkeleton>().Bones[i].Transform.eulerAngles.z.ToString("F4")+";"+ handRight.GetComponent<OVRSkeleton>().Bones[i].Transform.position.x.ToString("F4") +";"+ handRight.GetComponent<OVRSkeleton>().Bones[i].Transform.position.y.ToString("F4") +";"+ handRight.GetComponent<OVRSkeleton>().Bones[i].Transform.position.z.ToString("F4") +";"+ handRight.GetComponent<OVRSkeleton>().Bones[i].Transform.eulerAngles.x.ToString("F4") +";"+ handRight.GetComponent<OVRSkeleton>().Bones[i].Transform.eulerAngles.y.ToString("F4") +";"+ handRight.GetComponent<OVRSkeleton>().Bones[i].Transform.eulerAngles.z.ToString("F4"));
-		    	}
-		    	writerR.Close();
 				break;
 
 			case 2:
 				if(calibratingPosition.startCalibrating || Input.GetKeyDown(toggleRecordingKey))
 				{
+					time0 = Time.time;
 					state = 0;
 					calibratingPosition.startCalibrating = false;
 				}
 
 				break;
+
+			case 3:
+				Debug.Log("Finished recording");
+				break;
 		}
     }
+
+	
 
 }

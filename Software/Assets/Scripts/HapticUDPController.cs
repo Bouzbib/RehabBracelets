@@ -20,12 +20,17 @@ public class HapticUDPController : MonoBehaviour
     [Serializable]
     public enum ArmID {Left, Right};
     public ArmID armID;
+
+    public ArmID realArmID;
+    public int[] motorOrder;
+
+    private int numberMotor = 4;
     public static HapticUDPController Instance { get; private set; }
 
     [Header("ESP32 Address")]
-    public string espIP   = "192.168.4.100";
-    public int    espPort = 5005;
-    public int    ackPort = 5006;
+    public string espIP;
+    public int    espPort;
+    public int    ackPort;
 
     [Header("Network")]
     [Tooltip("Subnet prefix of your hotspot — same on PC and Quest")]
@@ -55,32 +60,50 @@ public class HapticUDPController : MonoBehaviour
     // ═════════════════════════════════════════════════════════
     void Awake()
     {
-        if(this.armID == ArmID.Right)
-        {
-            this.ackPort = 5006;
-        }
-        else
-        {
-            this.ackPort = 5008;
-        }
-        if (Instance != null && Instance != this) { Destroy(gameObject); return; }
+        
+        
+        //if (Instance != null && Instance != this) { Destroy(gameObject); return; }
         Instance = this;
         // DontDestroyOnLoad(gameObject);
     }
 
     void Start()
     {
+
+        if (this.armID == ArmID.Right)
+        {
+            this.espIP = "192.168.4.100";
+            this.espPort = 5005;
+            this.ackPort = 5006;
+        }
+        else
+        {
+            this.espIP = "192.168.4.101";
+            this.espPort = 5004;
+            this.ackPort = 5008;
+        }
+        motorOrder = new int[numberMotor];
+        for(int i = 0; i < numberMotor; i++)
+        {
+            motorOrder[i] = i;
+        }
+        
+
         string localIP = GetLocalIP();
-        Debug.Log($"[Haptics] Local interface: {localIP}");
+        //Debug.Log($"[Haptics] Local interface: {localIP}");
 
         _espEndPoint = new IPEndPoint(IPAddress.Parse(espIP), espPort);
         _sender      = new UdpClient(new IPEndPoint(IPAddress.Parse(localIP), 0));
+
+        GameObject armParent = this.armID == ArmID.Left ? GameObject.Find("Canvas/Bracelet0") : GameObject.Find("Canvas/Bracelet1");
+        this.statusLight = armParent.transform.Find("Connect Bracelet").GetComponent<Image>();
+
 
         StartReceiver(localIP);
         SetStatusLight(false);
 
         // SendCommand("CONNECT");
-        Debug.Log($"[Haptics] Sent CONNECT to {espIP}:{espPort}");
+        //Debug.Log($"[Haptics] Sent CONNECT to {espIP}:{espPort}");
     }
 
     void StartReceiver(string localIP = null)
@@ -99,7 +122,7 @@ public class HapticUDPController : MonoBehaviour
 
             _receiveThread = new Thread(ReceiveLoop) { IsBackground = true };
             _receiveThread.Start();
-            Debug.Log($"[Haptics] Listening on {localIP}:{ackPort}");
+            //Debug.Log($"[Haptics] Listening on {localIP}:{ackPort}");
         } catch (Exception e) {
             Debug.LogWarning($"[Haptics] Could not start receiver: {e.Message}");
         }
@@ -117,13 +140,13 @@ public class HapticUDPController : MonoBehaviour
         if (connected != _isConnected) {
             _isConnected = connected;
             SetStatusLight(connected);
-            Debug.Log($"[Haptics] {(connected ? "CONNECTED" : "NO SIGNAL")}");
+            //Debug.Log($"[Haptics] {(connected ? "CONNECTED TO " + ackPort : "NO SIGNAL ON " + ackPort)}");
         }
 
         if (!_isConnected && Time.time - _lastReconnectTime > ReconnectInterval) {
             _lastReconnectTime = Time.time;
             if (_receiveThread == null || !_receiveThread.IsAlive) {
-                Debug.Log("[Haptics] Receive thread dead — restarting");
+                //Debug.Log("[Haptics] Receive thread dead — restarting");
                 StartReceiver();
             }
             SendCommand("CONNECT");
@@ -153,14 +176,14 @@ public class HapticUDPController : MonoBehaviour
                 Enqueue(() => {
                     _lastAckTime = Time.time;
                     if (msg == "READY") {
-                        Debug.Log("[Haptics] ESP is READY");
+                        //Debug.Log("[Haptics] ESP is READY ON " + armID);
                         OnESPReady?.Invoke();
                     } else if (msg.StartsWith("CAL:")) {
                         ParseCalibration(msg);
                     } else if (msg.StartsWith("ACK:")) {
-                        Debug.Log($"[Haptics] ACK: {msg}");
+                        //Debug.Log($"[Haptics] ACK: {msg}");
                     } else {
-                        Debug.Log($"[Haptics] Reply: {msg}");
+                        //Debug.Log($"[Haptics] Reply: {msg}");
                     }
                 });
             } catch (Exception e) {
@@ -169,7 +192,7 @@ public class HapticUDPController : MonoBehaviour
                 break;
             }
         }
-        Debug.Log("[Haptics] Receive thread exited");
+        //Debug.Log("[Haptics] Receive thread exited");
     }
 
     private void ParseCalibration(string msg)
@@ -179,7 +202,7 @@ public class HapticUDPController : MonoBehaviour
         if (!TryParseFloat(p[1], out float ax)) return;
         if (!TryParseFloat(p[2], out float ay)) return;
         if (!TryParseFloat(p[3], out float az)) return;
-        Debug.Log($"[Haptics] Calibration: ax={ax:F3} ay={ay:F3} az={az:F3}");
+        //Debug.Log($"[Haptics] Calibration: ax={ax:F3} ay={ay:F3} az={az:F3}");
         OnCalibrationReceived?.Invoke(ax, ay, az);
     }
 
@@ -187,7 +210,7 @@ public class HapticUDPController : MonoBehaviour
     //  Public API
     // ═════════════════════════════════════════════════════════
     public void TriggerMotor(int motorIndex, int intensity = 255, int durationMs = 0)
-        => SendCommand($"MOTOR:{Mathf.Clamp(motorIndex,0,4)}:{Mathf.Clamp(intensity,0,255)}:{durationMs}");
+        => SendCommand($"MOTOR:{Mathf.Clamp(motorOrder[motorIndex],0, numberMotor)}:{Mathf.Clamp(intensity,0,255)}:{durationMs}");
 
     public void Pulse(int motorIndex, int durationMs, int intensity = 255)
         => TriggerMotor(motorIndex, intensity, durationMs);

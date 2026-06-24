@@ -27,11 +27,10 @@ public class InstantiateBalls : MonoBehaviour
 		public int columns;
 	}
 
+	[Tooltip("0: Left hand; 1: Right hand")]
 	public GameObject[] handVisual;
 
 	public HapticUDPController[] handHaptic;
-	public GameObject leftHandHaptic, rightHandHaptic; // defined after calibration
-
 
 	public Level chosenLevel;
 	public StimulusMode chosenStimulusMode;
@@ -153,37 +152,55 @@ void Update()
 
     			}
 				primitiveToInstantiate.SetActive(false);
-				state = -1;
+				state = -2;
 				break;
 
 
     		case -2:
 
 				this.GetComponent<CalibrateHandPosition>().enabled = false;
-	    		// Introduction // CALIBRATION
+				// Introduction // CALIBRATION
 
-    		// HERE WE NEED TO INIT IMU; AND CALIBRATE -> this determines which hapticUDP is haptic left or haptic right
-    		// This also determines who is motor left, right, bottom, up
+				// HERE WE NEED TO INIT IMU; AND CALIBRATE -> this determines which hapticUDP is haptic left or haptic right
+				// This also determines who is motor left, right, bottom, up
 
-    			// HERE PRESENTS PANEL START
-    	// 		for(int i = 0; i < panelStart.transform.childCount; i++)
-    	// 		{
-    	// 			if(panelStart.transform.GetChild(i).GetComponent<CollideAndDisappear>().isTouched)
-    	// 			{
-    	// 				panelStart.SetActive(false);
-    	// 				state = -1;
-    	// 			}
-    	// 		}
+				// HERE PRESENTS PANEL START
+				// 		for(int i = 0; i < panelStart.transform.childCount; i++)
+				// 		{
+				// 			if(panelStart.transform.GetChild(i).GetComponent<CollideAndDisappear>().isTouched)
+				// 			{
+				// 				panelStart.SetActive(false);
+				// 				state = -1;
+				// 			}
+				// 		}
 
-    	// 		if(UnityEngine.Input.GetKeyDown(KeyCode.Space))
-    	// 		{
-					// panelStart.SetActive(false);
-    	// 			state = -1;
-    	// 		}
-	    		motorLeft = 0;
+				// 		if(UnityEngine.Input.GetKeyDown(KeyCode.Space))
+				// 		{
+				// panelStart.SetActive(false);
+				// 			state = -1;
+				// 		}
+
+				handHaptic = new HapticUDPController[this.GetComponents<HapticUDPController>().Length];
+				for(int i = 0; i < this.GetComponents<HapticUDPController>().Length; i++)
+                {
+					if(this.GetComponents<HapticUDPController>()[i].realArmID == HapticUDPController.ArmID.Left)
+                    {
+						handHaptic[0] = this.GetComponents<HapticUDPController>()[i];
+					}
+					if (this.GetComponents<HapticUDPController>()[i].realArmID == HapticUDPController.ArmID.Right)
+					{
+						handHaptic[1] = this.GetComponents<HapticUDPController>()[i];
+					}
+				}
+
+
+
+				motorLeft = 0;
 	    		motorUp = 1;
 	    		motorRight = 2;
 	    		motorDown = 3;
+
+				state = -1;
     			break;
 
     		case -1:
@@ -218,25 +235,33 @@ void Update()
     			objectToLoad.AddComponent<CollideAndDisappear>();
 
     			interactiveObject = handVisual[leftOrRight[trialNumber]];
+
+				if(interactiveObject.transform.childCount != 0)
+				{ 
 				
-				for(int i = 0; i < interactiveObject.transform.Find("Capsules").transform.childCount; i++)
-                {
-					if (interactiveObject.transform.Find("Capsules").transform.GetChild(i).transform.GetChild(0).GetComponent<Rigidbody>() == null)
+					for(int i = 0; i < interactiveObject.transform.Find("Capsules").transform.childCount; i++)
 					{
-						interactiveObject.transform.Find("Capsules").transform.GetChild(i).transform.GetChild(0).gameObject.AddComponent<Rigidbody>();
-					}
+						if (interactiveObject.transform.Find("Capsules").transform.GetChild(i).transform.GetChild(0).GetComponent<Rigidbody>() == null)
+						{
+							interactiveObject.transform.Find("Capsules").transform.GetChild(i).transform.GetChild(0).gameObject.AddComponent<Rigidbody>();
+						}
 					
-					interactiveObject.transform.Find("Capsules").transform.GetChild(i).transform.GetChild(0).GetComponent<Rigidbody>().isKinematic = true;
-					interactiveObject.transform.Find("Capsules").transform.GetChild(i).transform.GetChild(0).GetComponent<Rigidbody>().useGravity = false;
-					interactiveObject.transform.Find("Capsules").transform.GetChild(i).transform.GetChild(0).GetComponent<Collider>().isTrigger = true;
-					interactiveObject.transform.Find("Capsules").transform.GetChild(i).transform.GetChild(0).gameObject.tag = "InteractiveObject";
+						interactiveObject.transform.Find("Capsules").transform.GetChild(i).transform.GetChild(0).GetComponent<Rigidbody>().isKinematic = true;
+						interactiveObject.transform.Find("Capsules").transform.GetChild(i).transform.GetChild(0).GetComponent<Rigidbody>().useGravity = false;
+						interactiveObject.transform.Find("Capsules").transform.GetChild(i).transform.GetChild(0).GetComponent<Collider>().isTrigger = true;
+						interactiveObject.transform.Find("Capsules").transform.GetChild(i).transform.GetChild(0).gameObject.tag = "InteractiveObject";
 
+					}
 				}
-				for (int i = 0; i < handVisual[(leftOrRight[trialNumber] + 1) % 2].transform.Find("Capsules").transform.childCount; i++)
-				{
-					handVisual[(leftOrRight[trialNumber] + 1) % 2].transform.Find("Capsules").transform.GetChild(i).GetChild(0).gameObject.tag = "Untagged";
+				if(handVisual[(leftOrRight[trialNumber] + 1) % 2].transform.childCount != 0)
+                {
+					for (int i = 0; i < handVisual[(leftOrRight[trialNumber] + 1) % 2].transform.Find("Capsules").transform.childCount; i++)
+					{
+						handVisual[(leftOrRight[trialNumber] + 1) % 2].transform.Find("Capsules").transform.GetChild(i).GetChild(0).gameObject.tag = "Untagged";
 
-				} 
+					}
+				}
+				
 				
 				
 				/* handVisual[leftOrRight[(trialNumber+1)%2]].tag = "Untagged";
@@ -414,7 +439,7 @@ void Update()
 				
     			Destroy(objectToLoad.GetComponent<CollideAndDisappear>());
     			objectToLoad.GetComponent<Renderer>().material.color = Color.white;
-		    	RecordPerformance(nbBloc, trialNumber, config, stopWatch);
+		    	//RecordPerformance(nbBloc, trialNumber, config, stopWatch);
 		    	trialNumber = trialNumber + 1;
     			if(configException.Count >= numberTouchMax)
 				{

@@ -18,14 +18,13 @@ using TMPro;
 
 public class IMUReceiver : MonoBehaviour
 {
-    [Serializable]
-    public enum ArmID {Left, Right};
-    public ArmID armID;
+    public HapticUDPController.ArmID armID;
+    public HapticUDPController.ArmID realArmID;
 
     [Header("Recording")]
     public float timeOn = 5.0f;
     [Header("Network")]
-    public int    imuPort      = 5007;
+    public int    imuPort;
     [Tooltip("Must match subnetPrefix in HapticUDPController")]
     public string subnetPrefix = "192.168.4.";
 
@@ -56,11 +55,14 @@ public class IMUReceiver : MonoBehaviour
     private volatile bool _imuWindowActive = false;
 
     public CalibrateHandPosition calibratingPosition;
+    public HapticUDPController hapticUDPController;
+    [HideInInspector]
+    public int[] motorOrder;
 
     // ═════════════════════════════════════════════════════════
     void Start()
     {
-        if(this.armID == ArmID.Right)
+        if(this.armID == HapticUDPController.ArmID.Right)
         {
             this.imuPort = 5007;
         }
@@ -68,6 +70,31 @@ public class IMUReceiver : MonoBehaviour
         {
             this.imuPort = 5009;
         }
+
+        for(int i = 0; i < this.GetComponents<HapticUDPController>().Length; i++)
+        {
+            HapticUDPController thisOne = this.GetComponents<HapticUDPController>()[i];
+            if(thisOne.armID == HapticUDPController.ArmID.Right)
+            {
+                if(this.armID == HapticUDPController.ArmID.Right)
+                {
+                    hapticUDPController = thisOne;
+                }
+            }
+            else
+            {
+                if (this.armID == HapticUDPController.ArmID.Left)
+                {
+                    hapticUDPController = thisOne;
+                }
+            }
+        }
+        
+        GameObject armParent = this.armID == HapticUDPController.ArmID.Left ? GameObject.Find("Canvas/Bracelet0") : GameObject.Find("Canvas/Bracelet1");
+        //this.rawDataText = armParent.transform.Find("RawData").GetComponent<TextMeshProUGUI>();
+        this.initButton = armParent.transform.Find("InitButton").GetComponentInChildren<Button>();
+        this.calibrateButton = armParent.transform.Find("Calibrate").GetComponentInChildren<Button>();
+        this.wristVisual = armParent.transform.Find("WristPosition");
 
         calibratingPosition = this.GetComponent<CalibrateHandPosition>();
 
@@ -97,8 +124,8 @@ public class IMUReceiver : MonoBehaviour
             initButton.onClick.AddListener(SendInitWire);
 
 
-        if (HapticUDPController.Instance != null)
-            HapticUDPController.Instance.OnCalibrationReceived += OnCalibrationReceived;
+        if (hapticUDPController != null)
+            hapticUDPController.OnCalibrationReceived += OnCalibrationReceived;
         else
             Debug.LogWarning("[IMU] HapticUDPController not found — start order issue?");
     }
@@ -133,8 +160,8 @@ public class IMUReceiver : MonoBehaviour
     {
         _receiver?.Close();
         _receiver = null;
-        if (HapticUDPController.Instance != null)
-            HapticUDPController.Instance.OnCalibrationReceived -= OnCalibrationReceived;
+        if (hapticUDPController != null)
+            hapticUDPController.OnCalibrationReceived -= OnCalibrationReceived;
     }
 
     // ═════════════════════════════════════════════════════════
@@ -167,21 +194,21 @@ public class IMUReceiver : MonoBehaviour
 
     public void SendInitWire()
     {
-        if (HapticUDPController.Instance == null) {
+        if (hapticUDPController == null) {
             Debug.LogWarning("[IMU] No HapticUDPController");
             return;
         }
-        HapticUDPController.Instance.SendCommand("INITIMU");
-        Debug.Log("[IMU] Sent INITIMU");
+        hapticUDPController.SendCommand("INITIMU");
+        Debug.Log("[IMU] Sent INITIMU TO " + imuPort);
     }
 
     public void SendCalibrate()
     {
-        if (HapticUDPController.Instance == null) {
+        if (hapticUDPController == null) {
             Debug.LogWarning("[IMU] No HapticUDPController");
             return;
         }
-        HapticUDPController.Instance.SendCommand("CALIBRATE");
+        hapticUDPController.SendCommand("CALIBRATE");
         Debug.Log("[IMU] Sent CALIBRATE");
         RequestIMUWindow(timeOn);
     }

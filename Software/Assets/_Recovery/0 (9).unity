@@ -12194,9 +12194,6 @@ MonoBehaviour:
   objectTrigger: {fileID: 2038869559}
   modelLeftHand: {fileID: 1558073557}
   modelRightHand: {fileID: 94580902}
-  windowData0: []
-  windowData1: []
-  windowSize: 45
   handRightObject: {fileID: 1576519571}
   handLeftObject: {fileID: 1559240112}
   wristR: {fileID: 0}
@@ -12208,6 +12205,10 @@ MonoBehaviour:
   finishCalibrating: 0
   state: 0
   imuReceivers: []
+  imuPos: -1
+  espPos: -1
+  ulnPos: -1
+  batteryPos: -1
 --- !u!1 &2093386075
 GameObject:
   m_ObjectHideFlags: 0
