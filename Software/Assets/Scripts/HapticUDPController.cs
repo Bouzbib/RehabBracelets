@@ -22,9 +22,8 @@ public class HapticUDPController : MonoBehaviour
     public ArmID armID;
 
     public ArmID realArmID;
-    public int[] motorOrder;
-
-    private int numberMotor = 4;
+    public int[] motorOrder = {0,1,2,3};
+    public static int numberMotor = 4;
     public static HapticUDPController Instance { get; private set; }
 
     [Header("ESP32 Address")]

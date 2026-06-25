@@ -1,7 +1,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
-
+using TMPro;
 public class CalibrateHandPosition : MonoBehaviour
 {
 
@@ -34,9 +34,10 @@ public class CalibrateHandPosition : MonoBehaviour
     private int frame;
 
     private bool reversed;
-    private bool bottomOrLeft, rightOrTop, rightOrBottom, leftOrTop;
+    private bool bottomOrLeft, rightOrTop, rightOrBottom, leftOrTop, isTop, isBottom;
 
     public int imuPos = -1, espPos = -1, ulnPos = -1, batteryPos = -1;
+    private GameObject panelInstructions;
     
     // Start is called before the first frame update
     void Start()
@@ -54,6 +55,9 @@ public class CalibrateHandPosition : MonoBehaviour
         windowData0 = new Vector3[windowSize];
         windowData1 = new Vector3[windowSize];
 
+        panelInstructions = GameObject.Find("PanelInstructions");
+
+        StartCoroutine(Instructions());
         StartCoroutine(WaitToStartWire());
     }
 
@@ -126,7 +130,7 @@ public class CalibrateHandPosition : MonoBehaviour
                                 if (!firstTime)
                                 {
                                     StartCoroutine(WaitAndRotate(-178, modelRightHand));
-                                    StartCoroutine(VerifyXandZ());
+                                    //StartCoroutine(VerifyXandZ());
                                     CheckOrientation();
                                     firstTime = true;
                                 }
@@ -179,28 +183,45 @@ public class CalibrateHandPosition : MonoBehaviour
                 
                 if (bottomOrLeft)
                 {
-                    if (rightOrBottom)
-                    { // Bottom
+                    //if (rightOrBottom)
+                    //{ // Bottom
+                    //    imuPos = 3;
+                    //}
+                    //if (leftOrTop)
+                    //{
+                    //    // Left
+                    //    imuPos = 2;
+                    //}
+                    if(isBottom)
+                    {
                         imuPos = 3;
                     }
-                    if (leftOrTop)
+                    else
                     {
-                        // Left
                         imuPos = 2;
                     }
                 }
 
                 if (rightOrTop)
                 {
-                    if (rightOrBottom)
+                    //if (rightOrBottom)
+                    //{
+                    //    // Right
+                    //    imuPos = 0;
+                    //}
+                    //if (leftOrTop)
+                    //{
+                    //    // Top
+                    //    imuPos = 1;
+                    //}
+                    if(isTop)
                     {
-                        // Right
-                        imuPos = 0;
-                    }
-                    if (leftOrTop)
-                    {
-                        // Top
                         imuPos = 1;
+
+                    }
+                    else
+                    {
+                        imuPos = 0;
                     }
                 }
 
@@ -227,21 +248,28 @@ public class CalibrateHandPosition : MonoBehaviour
                         }
                     }
                 }
-                
+                else
+                {
+                    Debug.LogWarning("Couldnt calibrate right hand");
+                    imuPos = 0;
+                    espPos = (imuPos + 1) % 4;
+                    ulnPos = (imuPos + 2) % 4;
+                    batteryPos = (imuPos + 3) % 4;
+                }
 
                 break;
 
 	        case 2:
 
-                rightOrBottom = false;
-                leftOrTop = false;
-                bottomOrLeft = false;
-                rightOrTop = false;
+                //rightOrBottom = false;
+                //leftOrTop = false;
+                //bottomOrLeft = false;
+                //rightOrTop = false;
 
-                imuPos = -1;
-                espPos = -1;
-                ulnPos = -1;
-                batteryPos = -1;
+                //imuPos = -1;
+                //espPos = -1;
+                //ulnPos = -1;
+                //batteryPos = -1;
 
                 if (ComparePositions(wristLF, wristL))
                 {
@@ -254,7 +282,7 @@ public class CalibrateHandPosition : MonoBehaviour
                             if (!firstTime)
                             {
                                 StartCoroutine(WaitAndRotate(178, modelLeftHand));
-                                StartCoroutine(VerifyXandZ());
+                                //StartCoroutine(VerifyXandZ());
                                 firstTime = true;
                             }
 
@@ -303,24 +331,44 @@ public class CalibrateHandPosition : MonoBehaviour
         }
 
     }
-    void DetermineOrientationR(IMUReceiver imuOfInterest)
+    void DetermineOrientation(IMUReceiver imuOfInterest)
     {
+
+        //Debug.Log(AngularDistance(imuOfInterest._gy));
         if (Mathf.Sign(AngularDistance(imuOfInterest._gy)) < 0)
         {
             reversed = true;
             if (Mathf.Sign(AngularDistance(imuOfInterest._gy)) == Mathf.Sign(AngularDistance(imuOfInterest._gz)))
             {
-                rightOrTop = false;
-                bottomOrLeft = true;
-                // IMU is top or right
-
+                if (imuOfInterest.realArmID == HapticUDPController.ArmID.Right)
+                {
+                    // IMU is bottom of left
+                    bottomOrLeft = true;
+                    rightOrTop = false;
+                }
+                else
+                {
+                    // IMU is top or right
+                    rightOrTop = true;
+                    bottomOrLeft = false;
+                    Debug.Log("RIGHT OR TOP");
+                }
             }
             else
             {
-                bottomOrLeft = false;
-                rightOrTop = true;
-                // IMU is bottom of left
-
+                if (imuOfInterest.realArmID == HapticUDPController.ArmID.Right)
+                {
+                    // IMU is top or right
+                    rightOrTop = true;
+                    bottomOrLeft = false;
+                }
+                else
+                {
+                    Debug.Log("BOTTOM OR LEFT");
+                    // IMU is bottom of left
+                    bottomOrLeft = true;
+                    rightOrTop = false;
+                }
             }
         }
         else
@@ -328,61 +376,45 @@ public class CalibrateHandPosition : MonoBehaviour
             reversed = false;
             if (Mathf.Sign(AngularDistance(imuOfInterest._gy)) == Mathf.Sign(AngularDistance(imuOfInterest._gz)))
             {
-                // IMU is top or right
-                rightOrTop = true;
-                bottomOrLeft = false;
-
+                if (imuOfInterest.realArmID == HapticUDPController.ArmID.Left)
+                {
+                    // IMU is bottom of left
+                    bottomOrLeft = true;
+                    rightOrTop = false;
+                }
+                else
+                {
+                    // IMU is top or right
+                    rightOrTop = true;
+                    bottomOrLeft = false;
+                    Debug.Log("RIGHT OR TOP");
+                }
             }
             else
             {
-                // IMU is bottom of left
-                bottomOrLeft = true;
-                rightOrTop = false;
+                if (imuOfInterest.realArmID == HapticUDPController.ArmID.Left)
+                {
+                    // IMU is top or right
+                    rightOrTop = true;
+                    bottomOrLeft = false;
+                }
+                else
+                {
+                    Debug.Log("BOTTOM OR LEFT");   
+                    // IMU is bottom of left
+                    bottomOrLeft = true;
+                    rightOrTop = false;
+                }
             }
+
         }
     }
 
-    void DetermineOrientationL(IMUReceiver imuOfInterest)
-    {
-        if (Mathf.Sign(AngularDistance(imuOfInterest._gy)) < 0)
-        {
-            reversed = true;
-            if (Mathf.Sign(AngularDistance(imuOfInterest._gy)) == Mathf.Sign(AngularDistance(imuOfInterest._gz)))
-            {
-                rightOrTop = false;
-                bottomOrLeft = true;
-                // IMU is top or right
-
-            }
-            else
-            {
-                bottomOrLeft = false;
-                rightOrTop = true;
-                // IMU is bottom of left
-
-            }
-        }
-        else
-        {
-            reversed = false;
-            if (Mathf.Sign(AngularDistance(imuOfInterest._gy)) == Mathf.Sign(AngularDistance(imuOfInterest._gz)))
-            {
-                // IMU is top or right
-                rightOrTop = true;
-                bottomOrLeft = false;
-
-            }
-            else
-            {
-                // IMU is bottom of left
-                bottomOrLeft = true;
-                rightOrTop = false;
-            }
-        }
-    }
+    
     void CheckOrientation()
     {
-        IMUReceiver imuOfInterest;
+        IMUReceiver imuOfInterest = new IMUReceiver();
+        Vector3[] nextDataToCheck = windowData0; //temp
         if (state < 2)
         {
             
@@ -391,7 +423,9 @@ public class CalibrateHandPosition : MonoBehaviour
                 imuReceivers[0].realArmID = HapticUDPController.ArmID.Right;
                 imuReceivers[1].realArmID = HapticUDPController.ArmID.Left;
                 imuOfInterest = imuReceivers[0];
-                DetermineOrientationR(imuOfInterest);
+                DetermineOrientation(imuOfInterest);
+                VerifyXandZ(windowData0, imuOfInterest);
+                nextDataToCheck = windowData1;
             }
 
 
@@ -400,7 +434,10 @@ public class CalibrateHandPosition : MonoBehaviour
                 imuReceivers[1].realArmID = HapticUDPController.ArmID.Right;
                 imuReceivers[0].realArmID = HapticUDPController.ArmID.Left;
                 imuOfInterest = imuReceivers[1];
-                DetermineOrientationR(imuOfInterest);
+                DetermineOrientation(imuOfInterest);
+                VerifyXandZ(windowData1, imuOfInterest);
+                nextDataToCheck = windowData0;
+
 
             }
         }
@@ -413,9 +450,11 @@ public class CalibrateHandPosition : MonoBehaviour
                     imuOfInterest = imuReceivers[i];
                 }
             }
-            DetermineOrientationL(imuOfInterest);
+            DetermineOrientation(imuOfInterest);
+            VerifyXandZ(nextDataToCheck, imuOfInterest);
+
         }
-        
+
     }
 
     bool ComparePositions(GameObject obj1, GameObject obj2)
@@ -460,30 +499,132 @@ public class CalibrateHandPosition : MonoBehaviour
 
     }
 
-    IEnumerator VerifyXandZ()
+    void VerifyXandZ(Vector3[] dataToAnalyse, IMUReceiver imuOfInterest)
     {
-        float time0 = Time.time;
-        float countdown = 5;
-        while (Time.time - time0 < countdown)
+        //float time0 = Time.time;
+        //float countdown = 5;
+        //while (Time.time - time0 < countdown)
+        //{
+        for (int i = 0; i < imuReceivers.Length; i++)
         {
-            for (int i = 0; i < imuReceivers.Length; i++)
+            if((StandardDeviation(dataToAnalyse).z > 5f))
             {
-               
-                if (Mathf.Sign(windowData1[frame].x - windowData1[((frame - 10)+windowSize) % windowSize].x) != Mathf.Sign(windowData1[frame].z - windowData1[((frame - 10) + windowSize) % windowSize].z))
+
+                //if (Mathf.Sign(windowData1[frame].x - windowData1[((frame - 10)+windowSize) % windowSize].x) != Mathf.Sign(windowData1[frame].z - windowData1[((frame - 10) + windowSize) % windowSize].z))
+                //{
+                //    Debug.Log("DIFFERENT SLOPES");
+                //    rightOrBottom = true;
+                //    leftOrTop = false;
+                //}
+                //else
+                //{
+                //    Debug.Log("SAME SLOPES");
+                //    leftOrTop = true;
+                //    rightOrBottom = false;
+                //}
+
+                // AX and AZ have same slope; if right arm: isTop; AX and AY same: bottom
+                if(imuOfInterest.realArmID == HapticUDPController.ArmID.Right)
                 {
-                    Debug.Log("DIFFERENT SLOPES");
-                    rightOrBottom = true;
-                    leftOrTop = false;
+                    if (Mathf.Sign(dataToAnalyse[frame].x - dataToAnalyse[((frame - 10) + windowSize) % windowSize].x) == Mathf.Sign(dataToAnalyse[frame].z - dataToAnalyse[((frame - 10) + windowSize) % windowSize].z))
+                    {
+                        isTop = true;
+                    }
+                    else
+                    {
+                        isTop = false;
+                    }
+
+                    if (Mathf.Sign(dataToAnalyse[frame].x - dataToAnalyse[((frame - 10) + windowSize) % windowSize].x) == Mathf.Sign(dataToAnalyse[frame].y - dataToAnalyse[((frame - 10) + windowSize) % windowSize].y))
+                    {
+                        isBottom = true;
+                    }
+                    else
+                    {
+                        isBottom = false;
+                    }
                 }
-                else
+
+                //XZ different: is top if left armm; if XY same is bottom
+                if (imuOfInterest.realArmID == HapticUDPController.ArmID.Left)
                 {
-                    Debug.Log("SAME SLOPES");
-                    leftOrTop = true;
-                    rightOrBottom = false;
+                    if (Mathf.Sign(dataToAnalyse[frame].x - dataToAnalyse[((frame - 10) + windowSize) % windowSize].x) != Mathf.Sign(dataToAnalyse[frame].z - dataToAnalyse[((frame - 10) + windowSize) % windowSize].z))
+                    {
+                        isTop = true;
+                    }
+                    else
+                    {
+                        isTop = false;
+                    }
+
+                    if (Mathf.Sign(dataToAnalyse[frame].x - dataToAnalyse[((frame - 10) + windowSize) % windowSize].x) == Mathf.Sign(dataToAnalyse[frame].y - dataToAnalyse[((frame - 10) + windowSize) % windowSize].y))
+                    {
+                        isBottom = true;
+                    }
+                    else
+                    {
+                        isBottom = false;
+                    }
                 }
+
+
+
             }
-            yield return null;
         }
+            //yield return null;
+        //}
+    }
+
+    IEnumerator Instructions()
+    {
+
+        if(!firstTime)
+        {
+            panelInstructions.transform.GetChild(0).gameObject.GetComponent<TextMeshPro>().text = "Empezamos con una calibración de tus manos. Vamos a poner la mano \n derecha en la mano azul frente tuyo, y seguir su movimiento.";
+        }
+        else
+        {
+            panelInstructions.transform.GetChild(0).gameObject.GetComponent<TextMeshPro>().text = " ¡Muy bien! Sigue el giro.";
+
+        }
+        yield return new WaitUntil(() => state == 1);
+
+
+        if (!firstTime)
+        {
+            panelInstructions.transform.GetChild(0).gameObject.GetComponent<TextMeshPro>().text = "Termina poniendo alineando bien tu mano con la azul.";
+        }
+        else
+        {
+            panelInstructions.transform.GetChild(0).gameObject.GetComponent<TextMeshPro>().text = " ¡Muy bien! Ahora puedes descansar tu mano derecha.";
+
+        }
+
+        yield return new WaitUntil(() => state == 2);
+
+        
+        if (!firstTime)
+        {
+            panelInstructions.transform.GetChild(0).gameObject.GetComponent<TextMeshPro>().text = "Siguemos con la mano izquierda: aliña tu mano en la mano verde.";
+        }
+        else
+        {
+            panelInstructions.transform.GetChild(0).gameObject.GetComponent<TextMeshPro>().text = " ¡Muy bien! Sigue el giro.";
+
+        }
+
+        yield return new WaitUntil(() => state == 3);
+
+        if (!firstTime)
+        {
+            panelInstructions.transform.GetChild(0).gameObject.GetComponent<TextMeshPro>().text = "Termina poniendo alineando bien tu mano con la verde.";
+        }
+        else
+        {
+            panelInstructions.transform.GetChild(0).gameObject.GetComponent<TextMeshPro>().text = " ¡Muy bien! Ahora empezamos el juego.";
+
+        }
+
     }
 
 

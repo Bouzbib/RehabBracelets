@@ -120,6 +120,7 @@ public class WriteHandData : MonoBehaviour
 			case 2:
 				if(calibratingPosition.startCalibrating || Input.GetKeyDown(toggleRecordingKey))
 				{
+					Debug.Log("Start recording");
 					time0 = Time.time;
 					state = 0;
 					calibratingPosition.startCalibrating = false;

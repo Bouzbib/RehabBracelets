@@ -76,6 +76,9 @@ public class InstantiateBalls : MonoBehaviour
 
 	private bool firstTimeHere;
 	private int motorUp, motorLeft, motorRight, motorDown;
+
+	private GameObject panelInstructions;
+
 	// Called in Editor when you change a value in Inspector
 	void OnValidate() => LoadConfig();
 
@@ -92,20 +95,16 @@ public class InstantiateBalls : MonoBehaviour
 		handVisual[0] = this.GetComponent<CalibrateHandPosition>().handLeftObject;
 		handVisual[1] = this.GetComponent<CalibrateHandPosition>().handRightObject;
 
+		panelInstructions = GameObject.Find("PanelInstructions");
 
-		// interactiveObject.tag = "InteractiveObject";
-		// interactiveObject.AddComponent<Rigidbody>();
-		// interactiveObject.GetComponent<Rigidbody>().isKinematic = true;
-		// interactiveObject.GetComponent<Rigidbody>().useGravity = false;
+		StartCoroutine(Instructions());
 
-
-		// panelStart = GameObject.Find("PanelStart");
 
 		// RecordPerformance();
 	}
 
-// Update is called once per frame
-void Update()
+	// Update is called once per frame
+	void Update()
     {
         for(int m = 0; m < configException.Count; m++)
 		{
@@ -195,7 +194,7 @@ void Update()
 
 
 
-				motorLeft = 0;
+				motorLeft = 1;
 	    		motorUp = 1;
 	    		motorRight = 2;
 	    		motorDown = 3;
@@ -333,19 +332,19 @@ void Update()
 								Vector3 lookingHere = hit.point;
 								if(objectToLoad.transform.position.x - lookingHere.x < 0.5f)
 								{
-									handHaptic[k].Pulse(motorLeft, 250, 255);
+									handHaptic[k].Pulse(motorLeft, 250, intensity);
 								}
 								if(objectToLoad.transform.position.x - lookingHere.x > 0.5f)
 								{
-									handHaptic[k].Pulse(motorRight, 250, 255);
+									handHaptic[k].Pulse(motorRight, 250, intensity);
 								}
 								if(objectToLoad.transform.position.y - lookingHere.y < 0.2f)
 								{
-									handHaptic[k].Pulse(motorDown, 250, 255);
+									handHaptic[k].Pulse(motorDown, 250, intensity);
 								}
 								if(objectToLoad.transform.position.y - lookingHere.y > 0.2f)
 								{
-									handHaptic[k].Pulse(motorUp, 250, 255);
+									handHaptic[k].Pulse(motorUp, 250, intensity);
 								}
 								firstTimeHere = false;
 							}
@@ -537,5 +536,65 @@ void Update()
     	}
     }
 
-	
+	IEnumerator Instructions()
+	{
+		string wordStimulus = "";
+		string endPhrase = "\n Estimulo " + trialNumber.ToString() + "/" + numberTouchMax.ToString();
+
+		switch(chosenStimulusType)
+        {
+			case StimulusType.Audio:
+				wordStimulus = "auditivo";
+				break;
+
+
+			case StimulusType.Haptic:
+				wordStimulus = "de vibración";
+				break;
+
+			case StimulusType.AudioHaptic:
+				wordStimulus = "de vibración y auditivo";
+				break;
+
+			case StimulusType.None:
+				panelInstructions.transform.GetChild(0).gameObject.GetComponent<TextMeshPro>().text = "Toca la pelota verde con la mano verde, y azul con la mano azul." + endPhrase;
+				break;
+
+		}
+		while(trialNumber < numberTouchMax)
+        {
+			if(chosenStimulusType != StimulusType.None)
+            {
+
+            
+				switch(chosenStimulusMode)
+				{
+					case StimulusMode.ArmID:
+						panelInstructions.transform.GetChild(0).gameObject.GetComponent<TextMeshPro>().text = "El estimulo " + wordStimulus +  " te indica \n con que mano interactuar." + endPhrase;
+
+						break;
+
+					case StimulusMode.Reward:
+						panelInstructions.transform.GetChild(0).gameObject.GetComponent<TextMeshPro>().text = "¡El estimulo " + wordStimulus + " te indica \n que has hecho bien!" + endPhrase;
+
+						break;
+
+					case StimulusMode.DirectionStatic:
+						panelInstructions.transform.GetChild(0).gameObject.GetComponent<TextMeshPro>().text = "¡El estimulo " + wordStimulus + " te indica \n donde está la pelota!" + endPhrase;
+
+						break;
+					case StimulusMode.DirectionDynamic:
+						panelInstructions.transform.GetChild(0).gameObject.GetComponent<TextMeshPro>().text = "¡El estimulo " + wordStimulus + " te indica que dirección \n seguir para encontrar la pelota!" + endPhrase;
+
+						break;
+				}
+			}
+
+			yield return null;
+        }
+
+
+	}
+
+
 }

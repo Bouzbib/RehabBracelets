@@ -50,8 +50,15 @@ public class GameManager : MonoBehaviour
         leftController.realArmID = leftIMU.realArmID;
         rightController.realArmID = rightIMU.realArmID;
 
-        leftController.motorOrder = leftIMU.motorOrder;
-        rightController.motorOrder = rightIMU.motorOrder;
+        if(leftIMU.motorOrder[0] != -1)
+        {
+            leftController.motorOrder = leftIMU.motorOrder;
+
+        }
+        if(rightIMU.motorOrder[0] != -1)
+        {
+            rightController.motorOrder = rightIMU.motorOrder;
+        }
 
     }
 

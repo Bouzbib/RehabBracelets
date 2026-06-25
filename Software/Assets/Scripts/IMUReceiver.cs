@@ -32,7 +32,7 @@ public class IMUReceiver : MonoBehaviour
     public Transform wristVisual;
 
     [Header("UI")]
-    public TextMeshProUGUI rawDataText;
+    //public TextMeshProUGUI rawDataText;
     // public TextMeshProUGUI handLabel;
     // public TextMeshProUGUI positionLabel;
     public Button          initButton;
@@ -89,7 +89,8 @@ public class IMUReceiver : MonoBehaviour
                 }
             }
         }
-        
+
+        motorOrder = new int[HapticUDPController.numberMotor];
         GameObject armParent = this.armID == HapticUDPController.ArmID.Left ? GameObject.Find("Canvas/Bracelet0") : GameObject.Find("Canvas/Bracelet1");
         //this.rawDataText = armParent.transform.Find("RawData").GetComponent<TextMeshProUGUI>();
         this.initButton = armParent.transform.Find("InitButton").GetComponentInChildren<Button>();
@@ -143,10 +144,10 @@ public class IMUReceiver : MonoBehaviour
 
         if (!hasNew || !_imuWindowActive) return;
 
-        if (rawDataText != null)
-            rawDataText.text =
-                $"Accel  X:{ax:+0.000}  Y:{ay:+0.000}  Z:{az:+0.000} g\n" +
-                $"Gyro   X:{gx:+0.0}  Y:{gy:+0.0}  Z:{gz:+0.0} °/s";
+        //if (rawDataText != null)
+        //    rawDataText.text =
+        //        $"Accel  X:{ax:+0.000}  Y:{ay:+0.000}  Z:{az:+0.000} g\n" +
+        //        $"Gyro   X:{gx:+0.0}  Y:{gy:+0.0}  Z:{gz:+0.0} °/s";
 
         if (wristVisual != null) {
             Quaternion target = Quaternion.FromToRotation(Vector3.up,
