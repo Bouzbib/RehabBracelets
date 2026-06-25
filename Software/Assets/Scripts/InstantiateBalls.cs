@@ -97,8 +97,6 @@ public class InstantiateBalls : MonoBehaviour
 
 		panelInstructions = GameObject.Find("PanelInstructions");
 
-		StartCoroutine(Instructions());
-
 
 		// RecordPerformance();
 	}
@@ -192,11 +190,11 @@ public class InstantiateBalls : MonoBehaviour
 					}
 				}
 
+				StartCoroutine(Instructions());
 
-
-				motorLeft = 1;
+				motorLeft = 2;
 	    		motorUp = 1;
-	    		motorRight = 2;
+	    		motorRight = 0;
 	    		motorDown = 3;
 
 				state = -1;
@@ -532,7 +530,7 @@ public class InstantiateBalls : MonoBehaviour
     		{
     			handHaptic[k].Pulse(i, (int)Mathf.Floor((float)(pulseDuration)), intensity);
     		}
-    		yield return new WaitForSeconds((float)pulseDuration);
+    		yield return new WaitForSeconds((float)1.0f);
     	}
     }
 
