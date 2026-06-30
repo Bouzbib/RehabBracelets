@@ -261,15 +261,15 @@ public class CalibrateHandPosition : MonoBehaviour
 
 	        case 2:
 
-                //rightOrBottom = false;
-                //leftOrTop = false;
-                //bottomOrLeft = false;
-                //rightOrTop = false;
+                rightOrBottom = false;
+                leftOrTop = false;
+                bottomOrLeft = false;
+                rightOrTop = false;
 
-                //imuPos = -1;
-                //espPos = -1;
-                //ulnPos = -1;
-                //batteryPos = -1;
+                imuPos = -1;
+                espPos = -1;
+                ulnPos = -1;
+                batteryPos = -1;
 
                 if (ComparePositions(wristLF, wristL))
                 {
@@ -324,6 +324,64 @@ public class CalibrateHandPosition : MonoBehaviour
                     modelLeftHand.GetComponentInChildren<Renderer>().material.color = originalColor[1];
                     objectTrigger.GetComponent<Renderer>().material.color = Color.red;
 
+                }
+
+
+                if (bottomOrLeft)
+                {
+                    if (isBottom)
+                    {
+                        imuPos = 3;
+                    }
+                    else
+                    {
+                        imuPos = 2;
+                    }
+                }
+
+                if (rightOrTop)
+                {
+                    if (isTop)
+                    {
+                        imuPos = 1;
+
+                    }
+                    else
+                    {
+                        imuPos = 0;
+                    }
+                }
+
+                if (imuPos != -1)
+                {
+                    if (!reversed)
+                    {
+                        espPos = (imuPos + 1) % 4;
+                        ulnPos = (imuPos + 2) % 4;
+                        batteryPos = (imuPos + 3) % 4;
+                    }
+                    else
+                    {
+                        espPos = ((imuPos - 1) + 4) % 4;
+                        ulnPos = ((imuPos - 2) + 4) % 4;
+                        batteryPos = ((imuPos - 3) + 4) % 4;
+                    }
+
+                    for (int i = 0; i < imuReceivers.Length; i++)
+                    {
+                        if (imuReceivers[i].realArmID == HapticUDPController.ArmID.Left)
+                        {
+                            imuReceivers[i].motorOrder = new int[] { imuPos, espPos, ulnPos, batteryPos };
+                        }
+                    }
+                }
+                else
+                {
+                    Debug.LogWarning("Couldnt calibrate right hand");
+                    imuPos = 0;
+                    espPos = (imuPos + 1) % 4;
+                    ulnPos = (imuPos + 2) % 4;
+                    batteryPos = (imuPos + 3) % 4;
                 }
 
                 break;

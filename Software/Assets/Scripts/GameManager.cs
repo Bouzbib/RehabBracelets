@@ -9,6 +9,7 @@ public class GameManager : MonoBehaviour
     [Header("Dropdowns")]
     [SerializeField] private TMP_Dropdown levelDropdown;
     [SerializeField] private TMP_Dropdown modeDropdown;
+    [SerializeField] private TMP_Dropdown audiomodeDropdown;
     [SerializeField] private TMP_Dropdown typeDropdown;
 
     [Header("References")]
@@ -41,6 +42,7 @@ public class GameManager : MonoBehaviour
 
         SetupLevelDropdown();
         SetupModeDropdown();
+        SetupAudioModeDropdown();
         SetupTypeDropdown();
 
 	}
@@ -107,7 +109,7 @@ public class GameManager : MonoBehaviour
     {
         modeDropdown.ClearOptions();
         modeDropdown.AddOptions(new System.Collections.Generic.List<string> {
-            "Reward", "ArmID", "DirectionStatic", "DirectionDynamic"
+            "Reward", "ArmID", "DirectionArm", "DirectionStatic", "DirectionDynamic"
         });
 
         // Set to current mode
@@ -115,10 +117,28 @@ public class GameManager : MonoBehaviour
         modeDropdown.onValueChanged.AddListener(OnModeChanged);
     }
 
+    void SetupAudioModeDropdown()
+    {
+        audiomodeDropdown.ClearOptions();
+        audiomodeDropdown.AddOptions(new System.Collections.Generic.List<string> {
+            "DirectionStatic", "DirectionDynamic"
+        });
+
+        // Set to current mode
+        audiomodeDropdown.value = (int)levelManager.chosenAudioMode;
+        audiomodeDropdown.onValueChanged.AddListener(OnAudioModeChanged);
+    }
+
     void OnModeChanged(int index)
     {
         levelManager.chosenStimulusMode = (InstantiateBalls.StimulusMode)index;
         Debug.Log($"[Master] Mode changed to {levelManager.chosenStimulusMode}");
+    }
+
+    void OnAudioModeChanged(int index)
+    {
+        levelManager.chosenAudioMode = (InstantiateBalls.AudioStimulusMode)index;
+        Debug.Log($"[Master] Mode changed to {levelManager.chosenAudioMode}");
     }
 
 

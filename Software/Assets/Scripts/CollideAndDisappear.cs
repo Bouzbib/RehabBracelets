@@ -8,6 +8,7 @@ public class CollideAndDisappear : MonoBehaviour
     private bool canBeTouched;
     public bool finishedVisual;
     private Color originalColor;
+    public bool playSound;
     // Start is called before the first frame update
     void Start()
     {
@@ -34,6 +35,10 @@ public class CollideAndDisappear : MonoBehaviour
     		isTouched = true;
             canBeTouched = false;
             StartCoroutine(FadeColor());
+            if(playSound)
+            {
+                this.GetComponent<AudioSource>().Play();
+            }
     	}
 
     }

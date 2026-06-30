@@ -13,10 +13,18 @@ public class InstantiateBalls : MonoBehaviour
 	public enum Level {Easy, Medium, Hard};
 
 	[Serializable]
-	public enum StimulusMode {Reward, ArmID, DirectionStatic, DirectionDynamic};
+	public enum StimulusMode {Reward, ArmID, DirectionArm, DirectionStatic, DirectionDynamic};
+
+
+	[Serializable]
+	public enum AudioStimulusMode { DirectionStatic, DirectionDynamic };
+
+
 
 	[Serializable]
 	public enum StimulusType {Haptic, Audio, AudioHaptic, None};
+
+	public AudioClip[] sonidos;
 
 
 	[Serializable]
@@ -30,11 +38,14 @@ public class InstantiateBalls : MonoBehaviour
 	[Tooltip("0: Left hand; 1: Right hand")]
 	public GameObject[] handVisual;
 
+	private AudioSource audioManager;
+
 	public HapticUDPController[] handHaptic;
 
 	public Level chosenLevel;
 	public StimulusMode chosenStimulusMode;
 	public StimulusType chosenStimulusType;
+	public AudioStimulusMode chosenAudioMode;
 	
 	public int pulseDuration = 500, intensity = 255;
 	private LevelConfig nivel;
@@ -74,7 +85,7 @@ public class InstantiateBalls : MonoBehaviour
 
 	private int[] leftOrRight;
 
-	private bool firstTimeHere;
+	private bool firstTimeHere, audiofirstTimeHere;
 	private int motorUp, motorLeft, motorRight, motorDown;
 
 	private GameObject panelInstructions;
@@ -87,7 +98,16 @@ public class InstantiateBalls : MonoBehaviour
 
     void Start()
     {
-        time0 = System.DateTime.Now.ToString("ddMMyyyy-HHmm");
+		// order for Sound -> reward; left; right; leftToRight; RightToLeft
+		sonidos = new AudioClip[6];
+		sonidos[0] = Resources.Load("correct") as AudioClip;
+		sonidos[1] = Resources.Load("vysium_audios_burst_WideBand_Left") as AudioClip;
+		sonidos[2] = Resources.Load("vysium_audios_burst_WideBand_Right") as AudioClip;
+		sonidos[3] = Resources.Load("vysium_audios_burst_WideBand_LeftToRight") as AudioClip;
+		sonidos[4] = Resources.Load("vysium_audios_burst_WideBand_RightToLeft") as AudioClip;
+		sonidos[5] = Resources.Load("vysium_audios_burst_WideBand_Center") as AudioClip;
+
+		time0 = System.DateTime.Now.ToString("ddMMyyyy-HHmm");
 		state = -3;
 
 
@@ -222,16 +242,30 @@ public class InstantiateBalls : MonoBehaviour
 
 				objectToLoad = GameObject.Find("Balls").transform.GetChild(config).gameObject;
 
-				objectToLoad.GetComponent<Renderer>().material.color = leftOrRight[trialNumber] == 0 ? handVisual[0].GetComponentInChildren<Renderer>().material.color : handVisual[1].GetComponentInChildren<Renderer>().material.color;
+				// LOAD CONDITIONS
+				objectToLoad.AddComponent<AudioSource>();
 
-    			// LOAD CONDITIONS
+				audioManager = new AudioSource();
+				audioManager = objectToLoad.GetComponent<AudioSource>();
+				audioManager.playOnAwake = false;
 
-				//handVisual[0].GetComponent<Renderer>().material.color = Color.blue;
-				//handVisual[1].GetComponent<Renderer>().material.color = Color.green;
+				switch(chosenStimulusMode)
+                {
+					case StimulusMode.ArmID:
+						audioManager.clip = leftOrRight[trialNumber] == 0 ? sonidos[1] : sonidos[2];
+						break;
 
-    			objectToLoad.AddComponent<CollideAndDisappear>();
+					case StimulusMode.Reward:
+						audioManager.clip = sonidos[0];
+						break;
 
-    			interactiveObject = handVisual[leftOrRight[trialNumber]];
+				}
+
+
+				objectToLoad.AddComponent<CollideAndDisappear>();
+				objectToLoad.GetComponent<CollideAndDisappear>().playSound = chosenStimulusType == StimulusType.Haptic ? false : true;
+
+				interactiveObject = handVisual[leftOrRight[trialNumber]];
 
 				if(interactiveObject.transform.childCount != 0)
 				{ 
@@ -259,28 +293,21 @@ public class InstantiateBalls : MonoBehaviour
 					}
 				}
 				
-				
-				
-				/* handVisual[leftOrRight[(trialNumber+1)%2]].tag = "Untagged";
-    			interactiveObject.tag = "InteractiveObject";
-
-    			if(interactiveObject.GetComponent<Rigidbody>() == null)
-    			{
-			        interactiveObject.AddComponent<Rigidbody>();
-    			}
-		        interactiveObject.GetComponent<Rigidbody>().isKinematic = true;
-		        interactiveObject.GetComponent<Rigidbody>().useGravity = false;
-				interactiveObject.GetComponent<Collider>().isTrigger = true;  */
-
 
     			startStopWatchTime = Time.time;
     			firstTimeHere = true;
-    			stopWatch = 0;
-    			state = 1;
+				audiofirstTimeHere = true;
+				stopWatch = 0;
+				//state = 1;
+				state = 8;
+				StartCoroutine(WaitBetweenSignals());
     			// update countDown = 0
     			// instantiate new sphere, condition i
 
     			break;
+			case 8:
+
+				break;
 
     		case 1:
     			stopWatch = Time.time - startStopWatchTime;
@@ -291,141 +318,186 @@ public class InstantiateBalls : MonoBehaviour
     			// If stimulus direction -> 
     			if(firstTimeHere)
     			{
-    				if(chosenStimulusMode == StimulusMode.ArmID)
-    				{
-    					switch(chosenStimulusType)
+					if((chosenStimulusType == StimulusType.Haptic) || (chosenStimulusType == StimulusType.AudioHaptic))
+					{ 
+						if (chosenStimulusMode == StimulusMode.ArmID)
     					{
-    						case StimulusType.Haptic:
-    							for(int motor = 0; motor < 4; motor++)
-		    					{
-		    						handHaptic[leftOrRight[trialNumber]].Pulse(motor, pulseDuration, intensity);
-		    					}
-    							break;
-							case StimulusType.Audio:
-								// audioManager.SetPan(Mathf.Pow(-1,leftOrRight[trialNumber+1]));
-								break;
-							case StimulusType.AudioHaptic:
-								for(int motor = 0; motor < 4; motor++)
-		    					{
-		    						handHaptic[leftOrRight[trialNumber]].Pulse(motor, pulseDuration, intensity);
-		    					}
-		    					// audioManager.SetPan(Mathf.Pow(-1,leftOrRight[trialNumber+1]));
-		    					break;
-    					}
+    					
+    						for(int motor = 0; motor < 4; motor++)
+		    				{
+		    					handHaptic[leftOrRight[trialNumber]].Pulse(motor, pulseDuration, intensity);
+		    				}
+							firstTimeHere = false;
+
+						}
 
 						// send vib to arm ID
 						// StimulusManager.mode, type -> pulse
 
-						firstTimeHere = false;
-					}
-    				if(chosenStimulusMode == StimulusMode.DirectionStatic)
-    				{
-    					for(int k = 0; k < handHaptic.Length; k++)
+						if (chosenStimulusMode == StimulusMode.DirectionArm)
 						{
-							RaycastHit hit;
-
-							if(Physics.Raycast(GameObject.Find("CenterEyeAnchor").transform.position, GameObject.Find("CenterEyeAnchor").transform.forward*radius*1.1f, out hit))
+							for (int k = 0; k < handHaptic.Length; k++)
 							{
-								// Debug.DrawRay(GameObject.Find("CenterEyeAnchor").transform.position, GameObject.Find("CenterEyeAnchor").transform.forward*hit.distance, Color.yellow);
+								RaycastHit hit;
+								if (Physics.Raycast(GameObject.Find("CenterEyeAnchor").transform.position, GameObject.Find("CenterEyeAnchor").transform.forward * radius * 1.1f, out hit))
+								{
+                                    Debug.DrawRay(GameObject.Find("CenterEyeAnchor").transform.position, GameObject.Find("CenterEyeAnchor").transform.forward * hit.distance, Color.yellow);
+                                    Vector3 lookingHere = hit.point;
+									if (objectToLoad.transform.position.x - lookingHere.x < -0.2f)
+									{
+										for (int motor = 0; motor < 4; motor++)
+										{
+											handHaptic[0].Pulse(motor, pulseDuration, intensity);
+										}
+									}
+									if (objectToLoad.transform.position.x - lookingHere.x > 0.2f)
+									{
+										for (int motor = 0; motor < 4; motor++)
+										{
+											handHaptic[1].Pulse(motor, pulseDuration, intensity);
+										}
+									}
+                                    if ((objectToLoad.transform.position.x - lookingHere.x > -0.2f) && (objectToLoad.transform.position.x - lookingHere.x < 0.2f))
+                                    {
+										for (int motor = 0; motor < 4; motor++)
+										{
+											handHaptic[leftOrRight[trialNumber]].Pulse(motor, pulseDuration, intensity);
+										}
+									}
+                                    //Debug.Log("Distance: " + (objectToLoad.transform.position.x - lookingHere.x));
+                                    firstTimeHere = false;
+								}
+							}
+						}
+
+						if (chosenStimulusMode == StimulusMode.DirectionStatic)
+						{
+							for (int k = 0; k < handHaptic.Length; k++)
+							{
+								RaycastHit hit;
+
+								if (Physics.Raycast(GameObject.Find("CenterEyeAnchor").transform.position, GameObject.Find("CenterEyeAnchor").transform.forward * radius * 1.1f, out hit))
+								{									
+                                    Vector3 lookingHere = hit.point;
+									if (objectToLoad.transform.position.x - lookingHere.x < -0.2f)
+									{
+										handHaptic[k].Pulse(motorLeft, pulseDuration, intensity);
+									}
+									if (objectToLoad.transform.position.x - lookingHere.x > 0.2f)
+									{
+										handHaptic[k].Pulse(motorRight, pulseDuration, intensity);
+									}
+                                    //if ((objectToLoad.transform.position.x - lookingHere.x > -0.2f) && (objectToLoad.transform.position.x - lookingHere.x < 0.2f))
+                                    //{
+                                    //    handHaptic[k].Pulse(motorLeft, pulseDuration, intensity);
+                                    //}
+                                    if (objectToLoad.transform.position.y - lookingHere.y < -0.2f)
+									{
+										handHaptic[k].Pulse(motorDown, pulseDuration, intensity);
+									}
+									if (objectToLoad.transform.position.y - lookingHere.y > 0.2f)
+									{
+										handHaptic[k].Pulse(motorUp, pulseDuration, intensity);
+									}
+									firstTimeHere = false;
+								}
+							}
+						}
+						if (chosenStimulusMode == StimulusMode.DirectionDynamic)
+						{
+							// send vib sweeping three motors one after the other on both arms
+							RaycastHit hit;
+							if (Physics.Raycast(GameObject.Find("CenterEyeAnchor").transform.position, GameObject.Find("CenterEyeAnchor").transform.forward * radius * 1.1f, out hit))
+							{
 								Vector3 lookingHere = hit.point;
-								if(objectToLoad.transform.position.x - lookingHere.x < 0.5f)
+								if (objectToLoad.transform.position.x - lookingHere.x < -0.2f)
 								{
-									handHaptic[k].Pulse(motorLeft, 250, intensity);
+									StartCoroutine(SweepingDirection(0, 2));
 								}
-								if(objectToLoad.transform.position.x - lookingHere.x > 0.5f)
+								if (objectToLoad.transform.position.x - lookingHere.x > 0.2f)
 								{
-									handHaptic[k].Pulse(motorRight, 250, intensity);
+									StartCoroutine(SweepingDirection(2, 0));
 								}
-								if(objectToLoad.transform.position.y - lookingHere.y < 0.2f)
+
+								if (objectToLoad.transform.position.y - lookingHere.y < -0.2f)
 								{
-									handHaptic[k].Pulse(motorDown, 250, intensity);
+									StartCoroutine(SweepingDirection(1, 3));
 								}
-								if(objectToLoad.transform.position.y - lookingHere.y > 0.2f)
+								if (objectToLoad.transform.position.y - lookingHere.y > 0.2f)
 								{
-									handHaptic[k].Pulse(motorUp, 250, intensity);
+									StartCoroutine(SweepingDirection(3, 1));
 								}
 								firstTimeHere = false;
 							}
-							
-							
 
-							// handHaptic[k].Pulse(motorDirection, 250, 255);
 						}
-    					// send vib to single motor direction on both arms
-    				}
-    				if(chosenStimulusMode == StimulusMode.DirectionDynamic)
-    				{
-    					// StartCoroutine(SweepHapticDirection());
-    					// send vib sweeping three motors one after the other on both arms
-    					RaycastHit hit;
-						if(Physics.Raycast(GameObject.Find("CenterEyeAnchor").transform.position, GameObject.Find("CenterEyeAnchor").transform.forward*radius*1.1f, out hit))
+					}
+				}
+
+				if(audiofirstTimeHere)
+				{ 
+					if ((chosenStimulusType == StimulusType.Audio) || (chosenStimulusType == StimulusType.AudioHaptic))
+					{
+
+						RaycastHit hit;
+						if (Physics.Raycast(GameObject.Find("CenterEyeAnchor").transform.position, GameObject.Find("CenterEyeAnchor").transform.forward * radius * 1.1f, out hit))
 						{
 							Vector3 lookingHere = hit.point;
-							if(objectToLoad.transform.position.x - lookingHere.x < 0.5f)
+							if (objectToLoad.transform.position.x - lookingHere.x < -0.2f)
 							{
-								StartCoroutine(SweepingDirection(0,2));
+								if(chosenAudioMode == AudioStimulusMode.DirectionStatic)
+                                {
+									audioManager.clip = sonidos[1];
+								}
+								if (chosenAudioMode == AudioStimulusMode.DirectionDynamic)
+								{
+									audioManager.clip = sonidos[3];
+								}
+								audioManager.Play();
+								StartCoroutine(SwitchAudio());
 							}
-							if(objectToLoad.transform.position.x - lookingHere.x > 0.5f)
+							if (objectToLoad.transform.position.x - lookingHere.x > 0.2f)
 							{
-								StartCoroutine(SweepingDirection(2,0));
+								if (chosenAudioMode == AudioStimulusMode.DirectionStatic)
+								{
+									audioManager.clip = sonidos[2];
+								}
+								if (chosenAudioMode == AudioStimulusMode.DirectionDynamic)
+								{
+									audioManager.clip = sonidos[4];
+								}
+								audioManager.Play();
+								StartCoroutine(SwitchAudio());
 							}
-							if(objectToLoad.transform.position.y - lookingHere.y < 0.2f)
-							{
-								StartCoroutine(SweepingDirection(1,3));
-							}
-							if(objectToLoad.transform.position.y - lookingHere.y > 0.2f)
-							{
-								StartCoroutine(SweepingDirection(3,1));
-							}
-							firstTimeHere = false;
+                            if ((objectToLoad.transform.position.x - lookingHere.x > -0.2f) && (objectToLoad.transform.position.x - lookingHere.x < 0.2f))
+                            {
+								audioManager.clip = sonidos[5];
+								audioManager.Play();
+								StartCoroutine(SwitchAudio());
+                            }
+                            audiofirstTimeHere = false;
 						}
-    					
-    				}
-    				
-    			}
+					}
 
-    			if(objectToLoad.GetComponent<CollideAndDisappear>().isTouched)
+				}
+
+				if (objectToLoad.GetComponent<CollideAndDisappear>().isTouched)
     			{
-    				if(chosenStimulusMode == StimulusMode.Reward)
-    				{
-    					switch(chosenStimulusType)
-    					{
-    						case StimulusType.Haptic:
-    							// send vib to all
-		    					for(int motor = 0; motor < 4; motor++)
-		    					{
-		    						for(int k = 0; k < handHaptic.Length; k++)
-		    						{
-		    							handHaptic[k].Pulse(motor, pulseDuration, intensity);
-		    						}
-		    						
-		    					}
-    							break;
-							case StimulusType.Audio:
-								// audioManager.SetPan(Mathf.Pow(-1,leftOrRight[trialNumber+1]));
-								break;
-							case StimulusType.AudioHaptic:
-								// send vib to all
-		    					for(int motor = 0; motor < 4; motor++)
-		    					{
-		    						for(int k = 0; k < handHaptic.Length; k++)
-		    						{
-		    							handHaptic[k].Pulse(motor, pulseDuration, intensity);
-		    						}
-		    						
-		    					}
-		    					// audioManager.SetPan(Mathf.Pow(-1,leftOrRight[trialNumber+1]));
-		    					break;
-    					}
-    					
-    				}
-    			}
+					if((chosenStimulusType == StimulusType.Haptic) || (chosenStimulusType == StimulusType.AudioHaptic))
+                    {
+						for (int motor = 0; motor < 4; motor++)
+						{
+							handHaptic[leftOrRight[trialNumber]].Pulse(motor, (int)Mathf.Floor(pulseDuration / 2), intensity);
+						}
+					}
+					
+                }
 
     			if(objectToLoad.GetComponent<CollideAndDisappear>().finishedVisual)
     			{
 					state = 2;
 
-    			}
+                }
 
     			// StartCoroutine(WaitForCollision());
     			// in coroutine -> record time
@@ -435,7 +507,7 @@ public class InstantiateBalls : MonoBehaviour
 		    	// Destroy(objectToLoad);
 				
     			Destroy(objectToLoad.GetComponent<CollideAndDisappear>());
-    			objectToLoad.GetComponent<Renderer>().material.color = Color.white;
+				objectToLoad.GetComponent<Renderer>().material.color = Color.white;
 		    	//RecordPerformance(nbBloc, trialNumber, config, stopWatch);
 		    	trialNumber = trialNumber + 1;
     			if(configException.Count >= numberTouchMax)
@@ -453,10 +525,11 @@ public class InstantiateBalls : MonoBehaviour
 				}
 				else
 				{
-					state = -1;
-				}
+					
+                    state = -1;
+                }
 
-				if(startOver)
+                if (startOver)
 				{
 					configException.Clear();
 					configException = new List<int>();
@@ -473,6 +546,20 @@ public class InstantiateBalls : MonoBehaviour
 
     }
 
+	IEnumerator WaitBetweenSignals()
+    {
+		yield return new WaitForSeconds(0.5f);
+		objectToLoad.GetComponent<Renderer>().material.color = leftOrRight[trialNumber] == 0 ? handVisual[0].GetComponentInChildren<Renderer>().material.color : handVisual[1].GetComponentInChildren<Renderer>().material.color;
+
+		state = 1;
+		
+	}
+
+	IEnumerator SwitchAudio()
+    {
+		yield return new WaitForSeconds(audioManager.clip.length);
+		audioManager.clip = sonidos[0];
+    }
 	public void LoadConfig() {
 	    nivel.level = chosenLevel;
 
@@ -525,7 +612,7 @@ public class InstantiateBalls : MonoBehaviour
     	int sign = (int)Mathf.Sign(motorFinish - motorStart);
     	for(int i = motorStart; i*sign < motorFinish*sign + 1; i = i + sign)
     	{
-    		Debug.Log("Sweeping Motor " + i);
+    		//Debug.Log("Sweeping Motor " + i);
     		for(int k = 0; k < handHaptic.Length; k++)
     		{
     			handHaptic[k].Pulse(i, (int)Mathf.Floor((float)(pulseDuration)), intensity);

@@ -14,6 +14,8 @@ using System.Text;
 using System.Threading;
 using UnityEngine;
 using UnityEngine.UI;
+using System.Collections;
+
 
 public class HapticUDPController : MonoBehaviour
 {
@@ -213,6 +215,20 @@ public class HapticUDPController : MonoBehaviour
 
     public void Pulse(int motorIndex, int durationMs, int intensity = 255)
         => TriggerMotor(motorIndex, intensity, durationMs);
+
+    public IEnumerator Transient(int motorIndex, int durationMs, int intensity = 255)
+    {
+        float t0 = Time.time;
+
+        while(Time.time - t0 < (durationMs*1000))
+        {
+            float x = Time.time - t0;
+            int newIntensity = (int)(20f * Mathf.Exp(40f * x) * Mathf.Sin(50f * x));
+            TriggerMotor(motorIndex, newIntensity, 20);
+            yield return null;
+        }
+
+    }
 
     public void StopMotor(int motorIndex)
         => TriggerMotor(motorIndex, 0, 0);
